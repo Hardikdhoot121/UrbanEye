@@ -14,9 +14,11 @@ export enum IssueSeverity {
 
 export enum IssueStatus {
   PENDING_VERIFICATION = "PENDING_VERIFICATION",
-  VERIFIED = "VERIFIED",
+  COMMUNITY_VERIFIED = "COMMUNITY_VERIFIED",
+  APPROVED = "APPROVED",
   REJECTED = "REJECTED",
-  RESOLVED = "RESOLVED"
+  RESOLVED = "RESOLVED",
+  CLOSED = "CLOSED"
 }
 
 export enum IssueCategory {
@@ -44,6 +46,13 @@ export interface VerificationVote {
   voteWeight: number;
   isApproved: boolean; // true for verify, false for fake
   timestamp: string;
+}
+
+export interface TimelineEvent {
+  status: IssueStatus;
+  timestamp: string;
+  actor: 'CITIZEN' | 'COMMUNITY' | 'ADMIN' | 'SYSTEM';
+  note?: string;
 }
 
 export interface Issue {
@@ -76,6 +85,8 @@ export interface Issue {
   requiredConsensus: number;
   supporterCount?: number;
   isPotentialDuplicate?: boolean;
+  timeline: TimelineEvent[];
+  mergedIntoId?: string;
   createdAt: string;
   updatedAt: string;
 }

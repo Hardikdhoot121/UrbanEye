@@ -78,7 +78,7 @@ export function VerificationQueue() {
     const voteWeight = currentTester.voteWeight;
     const previousScore = target.consensusScore || 0;
     const newScore = previousScore + voteWeight;
-    const targetThreshold = target.requiredConsensus || 70;
+    const targetThreshold = target.requiredConsensus || 15;
 
     if (newScore >= targetThreshold) {
       // Automatic verified transition -> Trigger Success Celebration Animation!

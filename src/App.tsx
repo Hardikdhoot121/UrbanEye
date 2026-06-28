@@ -6,6 +6,7 @@ import { MapVisualizer } from './features/map/MapVisualizer';
 import { ReportWizard } from './features/reporting/ReportWizard';
 import { Leaderboard } from './features/gamification/Leaderboard';
 import { VerificationQueue } from './features/verification/VerificationQueue';
+import { AdminDashboard } from './features/admin/AdminDashboard';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -22,6 +23,8 @@ export default function App() {
         return <ReportWizard />;
       case 'leaderboard':
         return <Leaderboard />;
+      case 'admin':
+        return <AdminDashboard />;
       default:
         return <DashboardPanel />;
     }

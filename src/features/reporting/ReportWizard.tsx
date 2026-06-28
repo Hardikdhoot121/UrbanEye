@@ -186,7 +186,7 @@ export function ReportWizard() {
       },
       votes: [],
       consensusScore: 0,
-      requiredConsensus: 70,
+      requiredConsensus: 15,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

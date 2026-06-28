@@ -10,6 +10,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: 'verification', label: 'Verification Queue', icon: '🛡️' },
     { id: 'report', label: 'Report Issue', icon: '➕' },
     { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
+    { id: 'admin', label: 'Admin Moderation', icon: '⚙️' },
   ];
 
   return (

@@ -39,6 +39,13 @@ export class MockDatabaseService {
       ...issue,
       id: `issue-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       votes: [],
+      timeline: [
+        {
+          status: issue.status || 'PENDING_VERIFICATION',
+          timestamp: new Date().toISOString(),
+          actor: 'CITIZEN'
+        }
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };

@@ -96,7 +96,7 @@ export function QueueCard({ issue, onVerify, onReportFake, onSkip, activeVoter }
 
   // Consensus analytics
   const score = issue.consensusScore || 0;
-  const target = issue.requiredConsensus || 70;
+  const target = issue.requiredConsensus || 15;
   const progressPercent = Math.max(0, Math.min(100, (score / target) * 100));
   const remainingPoints = Math.max(0, target - score);
   const numContributors = issue.votes ? issue.votes.length : 0;

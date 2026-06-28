@@ -78,9 +78,11 @@ export function MapVisualizer() {
       // Status filtering
       if (filterStatus !== 'ALL') {
         if (filterStatus === 'PENDING' && issue.status !== IssueStatus.PENDING_VERIFICATION) return false;
-        if (filterStatus === 'VERIFIED' && issue.status !== IssueStatus.VERIFIED) return false;
+        if (filterStatus === 'VERIFIED' && issue.status !== IssueStatus.COMMUNITY_VERIFIED) return false;
         if (filterStatus === 'RESOLVED' && issue.status !== IssueStatus.RESOLVED) return false;
+        if (filterStatus === 'APPROVED' && issue.status !== IssueStatus.APPROVED) return false;
       }
+      if (filterStatus !== 'CLOSED' && issue.status === IssueStatus.CLOSED) return false;
 
       // Search Query filtering (checks: ID, street/description, category, reporter, summary)
       if (searchQuery.trim() !== '') {
@@ -103,7 +105,11 @@ export function MapVisualizer() {
   // Keep selected details issue updated with fresh store updates
   const updatedDetailsIssue = useMemo(() => {
     if (!selectedIssueForDetails) return null;
-    return issues.find(i => i.id === selectedIssueForDetails.id) || selectedIssueForDetails;
+    let target = issues.find(i => i.id === selectedIssueForDetails.id) || selectedIssueForDetails;
+    if (target.mergedIntoId) {
+       target = issues.find(i => i.id === target.mergedIntoId) || target;
+    }
+    return target;
   }, [issues, selectedIssueForDetails]);
 
   // Custom marker generator using L.divIcon
@@ -111,9 +117,12 @@ export function MapVisualizer() {
     let colorClass = 'bg-slate-500 border-slate-300 ring-slate-500/30';
     let pulseColorClass = 'bg-slate-500/20';
     
-    if (status === IssueStatus.VERIFIED) {
+    if (status === IssueStatus.APPROVED) {
       colorClass = 'bg-emerald-500 border-emerald-300 ring-emerald-500/30';
       pulseColorClass = 'bg-emerald-500/20';
+    } else if (status === IssueStatus.COMMUNITY_VERIFIED) {
+      colorClass = 'bg-amber-400 border-amber-300 ring-amber-400/30';
+      pulseColorClass = 'bg-amber-400/20';
     } else if (status === IssueStatus.RESOLVED) {
       colorClass = 'bg-sky-500 border-sky-300 ring-sky-500/30';
       pulseColorClass = 'bg-sky-500/20';
@@ -121,8 +130,11 @@ export function MapVisualizer() {
       colorClass = 'bg-red-500 border-red-300 ring-red-500/30';
       pulseColorClass = 'bg-red-500/20';
     } else if (status === IssueStatus.PENDING_VERIFICATION) {
-      colorClass = 'bg-amber-500 border-amber-300 ring-amber-500/30';
-      pulseColorClass = 'bg-amber-500/20';
+      colorClass = 'bg-slate-400 border-slate-300 ring-slate-400/30';
+      pulseColorClass = 'bg-slate-400/20';
+    } else if (status === IssueStatus.CLOSED) {
+      colorClass = 'bg-slate-700 border-slate-600 ring-slate-700/30';
+      pulseColorClass = 'hidden';
     }
 
     const emoji = getCategoryEmoji(category as IssueCategory);
@@ -145,17 +157,21 @@ export function MapVisualizer() {
 
   const getPopupHTML = (issue: Issue) => {
     const badgeColors = {
-      VERIFIED: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
-      PENDING_VERIFICATION: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+      APPROVED: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      COMMUNITY_VERIFIED: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+      PENDING_VERIFICATION: 'text-slate-300 bg-slate-500/10 border-slate-500/20',
       RESOLVED: 'text-sky-400 bg-sky-500/10 border-sky-500/20',
       REJECTED: 'text-red-400 bg-red-500/10 border-red-500/20',
+      CLOSED: 'text-slate-500 bg-slate-700/10 border-slate-700/20'
     }[issue.status] || 'text-slate-400 bg-slate-500/10 border-slate-500/20';
 
     const statusLabel = {
-      VERIFIED: 'Verified',
-      PENDING_VERIFICATION: 'Pending Audit',
+      APPROVED: 'Approved',
+      COMMUNITY_VERIFIED: 'Verified',
+      PENDING_VERIFICATION: 'Pending',
       RESOLVED: 'Resolved',
       REJECTED: 'Rejected',
+      CLOSED: 'Closed/Merged',
     }[issue.status] || issue.status;
 
     const confidenceStr = issue.aiAnalysis.confidence > 1 
@@ -444,7 +460,7 @@ export function MapVisualizer() {
 
                 {/* Filter Chips Container */}
                 <div className="flex items-center space-x-1.5 overflow-x-auto p-1 bg-slate-950 rounded-xl border border-slate-800">
-                  {['ALL', 'PENDING', 'VERIFIED', 'RESOLVED'].map((status) => (
+                  {['ALL', 'PENDING', 'VERIFIED', 'APPROVED', 'RESOLVED'].map((status) => (
                     <button
                       key={status}
                       onClick={() => setFilterStatus(status)}
@@ -454,7 +470,7 @@ export function MapVisualizer() {
                           : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900'
                       }`}
                     >
-                      {status === 'PENDING' ? 'Pending' : status === 'ALL' ? 'All' : status.toLowerCase()}
+                      {status === 'ALL' ? 'All' : status.toLowerCase()}
                     </button>
                   ))}
                 </div>
@@ -521,13 +537,17 @@ export function MapVisualizer() {
                           </h3>
                           <div className="flex flex-wrap items-center gap-1.5 mt-1">
                             <span className={`px-1.5 py-0.5 rounded text-3xs font-mono font-bold uppercase tracking-widest ${
-                              selectedIssue.status === IssueStatus.VERIFIED
+                              selectedIssue.status === IssueStatus.APPROVED
                                 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                                : selectedIssue.status === IssueStatus.COMMUNITY_VERIFIED
+                                ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                 : selectedIssue.status === IssueStatus.RESOLVED
                                 ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
                                 : selectedIssue.status === IssueStatus.REJECTED
                                 ? 'bg-red-500/10 text-red-400 border border-red-500/20'
-                                : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                : selectedIssue.status === IssueStatus.CLOSED
+                                ? 'bg-slate-700/10 text-slate-500 border border-slate-700/20'
+                                : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
                             }`}>
                               {selectedIssue.status.replace('_', ' ')}
                             </span>
@@ -631,12 +651,16 @@ export function MapVisualizer() {
                   <p className="font-mono text-slate-500 uppercase tracking-wider text-3xs">Map Legend</p>
                   <div className="grid grid-cols-2 gap-2 text-slate-400 font-mono text-3xs">
                     <div className="flex items-center space-x-1.5">
-                      <span className="w-2 h-2 rounded-full bg-amber-500 block shrink-0"></span>
+                      <span className="w-2 h-2 rounded-full bg-slate-400 block shrink-0"></span>
                       <span>Pending Verification</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 block shrink-0"></span>
+                      <span className="w-2 h-2 rounded-full bg-amber-400 block shrink-0"></span>
                       <span>Verified Consensus</span>
+                    </div>
+                    <div className="flex items-center space-x-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 block shrink-0"></span>
+                      <span>Admin Approved</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <span className="w-2 h-2 rounded-full bg-sky-500 block shrink-0"></span>
@@ -684,13 +708,17 @@ export function MapVisualizer() {
                   </span>
                 )}
                 <span className={`px-2.5 py-1 rounded-xl text-xs font-mono font-bold uppercase tracking-wider border ${
-                  updatedDetailsIssue.status === IssueStatus.VERIFIED
+                  updatedDetailsIssue.status === IssueStatus.APPROVED
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                    : updatedDetailsIssue.status === IssueStatus.COMMUNITY_VERIFIED
+                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/25'
                     : updatedDetailsIssue.status === IssueStatus.RESOLVED
                     ? 'bg-sky-500/10 text-sky-400 border-sky-500/25'
                     : updatedDetailsIssue.status === IssueStatus.REJECTED
                     ? 'bg-red-500/10 text-red-400 border-red-500/25'
-                    : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
+                    : updatedDetailsIssue.status === IssueStatus.CLOSED
+                    ? 'bg-slate-700/10 text-slate-500 border-slate-700/25'
+                    : 'bg-slate-500/10 text-slate-400 border-slate-500/25'
                 }`}>
                   {updatedDetailsIssue.status.replace('_', ' ')}
                 </span>

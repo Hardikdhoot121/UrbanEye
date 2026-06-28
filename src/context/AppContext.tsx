@@ -9,9 +9,10 @@ interface AppContextType {
   updateIssue: (issue: Issue) => void;
   castVote: (
     issueId: string,
-    isApproved: boolean,
     voter: { id: string; username: string; karmaPoints: number; voteWeight: number }
   ) => void;
+  adminAction: (issueId: string, action: 'APPROVE' | 'REJECT', note?: string) => void;
+  mergeIssue: (sourceId: string, targetId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -60,7 +61,14 @@ const initialSeedIssues: Issue[] = [
       }
     ],
     consensusScore: 10,
-    requiredConsensus: 70,
+    requiredConsensus: 15,
+    timeline: [
+      {
+        status: IssueStatus.PENDING_VERIFICATION,
+        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+        actor: 'CITIZEN'
+      }
+    ],
     createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
     updatedAt: new Date(Date.now() - 3600000 * 1.1).toISOString()
   },
@@ -69,7 +77,7 @@ const initialSeedIssues: Issue[] = [
     description: "Large deep pothole in the middle of the rightmost lane on Guerrero St. Extremely dangerous for motorcyclists and cyclists.",
     category: IssueCategory.TRANSPORTATION,
     severity: Severity.CRITICAL,
-    status: IssueStatus.VERIFIED,
+    status: IssueStatus.COMMUNITY_VERIFIED,
     coordinates: { latitude: 37.7592, longitude: -122.4258 },
     trustScore: 94,
     aiAnalysis: {
@@ -89,7 +97,19 @@ const initialSeedIssues: Issue[] = [
     },
     votes: [],
     consensusScore: 70,
-    requiredConsensus: 70,
+    requiredConsensus: 15,
+    timeline: [
+      {
+        status: IssueStatus.PENDING_VERIFICATION,
+        timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
+        actor: 'CITIZEN'
+      },
+      {
+        status: IssueStatus.COMMUNITY_VERIFIED,
+        timestamp: new Date(Date.now() - 3600000 * 20).toISOString(),
+        actor: 'COMMUNITY'
+      }
+    ],
     createdAt: new Date(Date.now() - 3600000 * 24).toISOString(), // 24 hours ago
     updatedAt: new Date(Date.now() - 3600000 * 24).toISOString()
   },
@@ -118,7 +138,30 @@ const initialSeedIssues: Issue[] = [
     },
     votes: [],
     consensusScore: 75,
-    requiredConsensus: 70,
+    requiredConsensus: 15,
+    timeline: [
+      {
+        status: IssueStatus.PENDING_VERIFICATION,
+        timestamp: new Date(Date.now() - 3600000 * 72).toISOString(),
+        actor: 'CITIZEN'
+      },
+      {
+        status: IssueStatus.COMMUNITY_VERIFIED,
+        timestamp: new Date(Date.now() - 3600000 * 70).toISOString(),
+        actor: 'COMMUNITY'
+      },
+      {
+        status: IssueStatus.APPROVED,
+        timestamp: new Date(Date.now() - 3600000 * 68).toISOString(),
+        actor: 'ADMIN'
+      },
+      {
+        status: IssueStatus.RESOLVED,
+        timestamp: new Date(Date.now() - 3600000 * 12).toISOString(),
+        actor: 'SYSTEM',
+        note: 'Municipal work crew confirmed repair.'
+      }
+    ],
     createdAt: new Date(Date.now() - 3600000 * 72).toISOString(), // 3 days ago
     updatedAt: new Date(Date.now() - 3600000 * 12).toISOString()
   }
@@ -211,12 +254,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         // Determine next status
         let nextStatus = issue.status;
-        const requiredThreshold = issue.requiredConsensus || 70;
+        const requiredThreshold = issue.requiredConsensus || 15;
 
         if (newConsensusScore >= requiredThreshold) {
-          nextStatus = IssueStatus.VERIFIED;
+          nextStatus = IssueStatus.COMMUNITY_VERIFIED;
         } else if (newConsensusScore <= -30) {
           nextStatus = IssueStatus.REJECTED;
+        }
+
+        const nextTimeline = [...(issue.timeline || [])];
+        if (nextStatus !== issue.status) {
+          nextTimeline.push({
+            status: nextStatus,
+            timestamp: new Date().toISOString(),
+            actor: 'COMMUNITY'
+          });
         }
 
         return {
@@ -225,6 +277,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           consensusScore: newConsensusScore,
           trustScore: newTrustScore,
           status: nextStatus,
+          timeline: nextTimeline,
           updatedAt: new Date().toISOString()
         };
       });
@@ -234,8 +287,72 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const adminAction = (issueId: string, action: 'APPROVE' | 'REJECT', note?: string) => {
+    setIssues((prev) => {
+      const updated = prev.map((issue) => {
+        if (issue.id !== issueId) return issue;
+        const nextStatus = action === 'APPROVE' ? IssueStatus.APPROVED : IssueStatus.REJECTED;
+        return {
+          ...issue,
+          status: nextStatus,
+          timeline: [
+            ...(issue.timeline || []),
+            {
+              status: nextStatus,
+              timestamp: new Date().toISOString(),
+              actor: 'ADMIN',
+              note
+            }
+          ],
+          updatedAt: new Date().toISOString()
+        };
+      });
+      localStorage.setItem('community_issues', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const mergeIssue = (sourceId: string, targetId: string) => {
+    setIssues((prev) => {
+      const targetIssue = prev.find(i => i.id === targetId);
+      if (!targetIssue) return prev;
+      
+      const updated = prev.map((issue) => {
+        if (issue.id === sourceId) {
+          return {
+            ...issue,
+            status: IssueStatus.CLOSED,
+            mergedIntoId: targetId,
+            timeline: [
+              ...(issue.timeline || []),
+              {
+                status: IssueStatus.CLOSED,
+                timestamp: new Date().toISOString(),
+                actor: 'ADMIN',
+                note: `Merged into issue ${targetId}`
+              }
+            ],
+            updatedAt: new Date().toISOString()
+          };
+        }
+        if (issue.id === targetId) {
+          const sourceIssue = prev.find(i => i.id === sourceId);
+          return {
+            ...issue,
+            consensusScore: issue.consensusScore + (sourceIssue?.consensusScore || 0),
+            supporterCount: (issue.supporterCount || 0) + (sourceIssue?.supporterCount || 0) + 1,
+            updatedAt: new Date().toISOString()
+          };
+        }
+        return issue;
+      });
+      localStorage.setItem('community_issues', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   return (
-    <AppContext.Provider value={{ issues, userProfile, loading, addIssue, updateIssue, castVote }}>
+    <AppContext.Provider value={{ issues, userProfile, loading, addIssue, updateIssue, castVote, adminAction, mergeIssue }}>
       {children}
     </AppContext.Provider>
   );
