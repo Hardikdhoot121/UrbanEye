@@ -1,0 +1,10 @@
+{
+  "name": "Community Hero",
+  "description": "A hyperlocal citizen resolution center and community verification hub with gamified civic engagement.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
