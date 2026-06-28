@@ -14,12 +14,102 @@ Citizens report real-world incidents, verify peer-submitted issues, promote cons
 
 ---
 
+## 🚀 Step-by-Step Development Journey
+
+This application evolved from a simple concept into a highly robust, multi-layered full-stack civic ecosystem. Below is the step-by-step chronology of how we built and engineered Community Hero:
+
+```
+┌──────────────────────────────────────┐
+│  Phase 1: Architecture & Bootstrapping│ ──► Core schemas, layout, Express + Vite configuration
+└──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│   Phase 2: Server-Side Gemini API   │ ──► Dual-Model fallback (3.5 & 2.5 Flash), exponential retries
+└──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│   Phase 3: Spatial Map Integration   │ ──► Leaflet map projections, details drawers, reactive pins
+└──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│  Phase 4: Consensus Ledger Queue     │ ──► Peer auditing votes, citizen Karma levels, leaderboards
+└──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│  Phase 5: Intelligent Duplicate HUD  │ ──► Haversine (≤50m), Jaccard text similarity, endorsement logs
+└──────────────────────────────────────┘
+```
+
+### 1️⃣ Phase 1: Core Architecture & Bootstrapping
+*   **Monolith Setup:** Configured Express v4 as our Node runtime environment coupled with Vite v6 to handle hot-module client asset rendering.
+*   **Data Models & Schemas:** Designed type-safe TypeScript interfaces inside `/src/types/` representing nested entities:
+    *   `Issue`: Tracks unique ID, description, coordinates, category, severity status, image URL, voter consensus logs, potential duplicate markers, and owner reporter details.
+    *   `UserProfile` & `VerificationVote`: Coordinates gamification metrics, Karma levels, level-badges, and voter signatures.
+*   **Seed Injection:** Written a local database seeder (`/src/services/mockService.ts`) to initialize high-fidelity mock reports across San Francisco to simulate active neighborhoods on startup.
+
+### 2️⃣ Phase 2: Server-Side Gemini API Orchestration
+*   **Strict Security Proxies:** Kept high-value AI credentials fully protected inside Express backend routes, completely hidden from client inspection.
+*   **Dual-Model Failover Resilience:** Configured the `@google/genai` TypeScript SDK with automated retry handlers. If Gemini 3.5 Flash reaches rate caps, our pipeline instantly rolls over to Gemini 2.5 Flash.
+*   **JSON Schema Constraints:** Passed strict prompt parameters enforcing exact structured JSON output formats matching our classification schemas, returning categorization, confidence score, Urgency levels, reason, and suggested action blocks.
+
+### 3️⃣ Phase 3: Spatial Map Integration
+*   **Geospatial Mapping:** Integrated **Leaflet** maps with high-contrast slate skinning.
+*   **Dynamic Pin Clustering:** Multi-colored pins translate severity ratings visually (High is a dark orange pulse, Critical is deep crimson).
+*   **Detail Canvas Drawers:** Engineered slide-out drawer components presenting granular logs, photo evidence, current support counts, and consensus metrics.
+
+### 4️⃣ Phase 4: Decentralized Consensus & Gamification
+*   **Peer Validation Queue:** Developed a localized ledger allowing nearby citizens to review pending reports and cast votes (Verify/Reject).
+*   **Karma Progression Loop:** Awarded +15 karma points for new reports, +10 for active audit reviews, and +20 for supporting duplicated logs, triggering automatic citizen level-ups (Novice to Neighborhood Hero).
+*   **Community Leaderboard:** Designed high-contrast rankings boards updating in real time.
+
+### 5️⃣ Phase 5: Intelligent Duplicate HUD (Current Stage)
+*   **Haversine Distance Check:** Computes precise terrestrial spacing in meters between candidate and existing issues.
+*   **Jaccard Text Matching:** Created an algorithmic parser to clean descriptions, strip punctuation, remove stop-words, and gauge textual overlap.
+*   **Interactive Dual Action HUD:** If an issue matches category, severity, and sits under 50m:
+    *   The user gets presented with an immediate comparison dashboard.
+    *   **Support & Endorse Option:** Increments voter consensus on the existing issue, promoting it to municipal visibility without cluttering the map.
+    *   **Create Anyway Option:** Files a new ticket flagged permanently with a transparent `Potential Duplicate` marker.
+
+---
+
+## 🗺️ Application Routing, Views & Navigation Paths
+
+Since Community Hero operates as a high-fidelity Single Page Application (SPA) inside a unified map-hub interface, routing and viewstates are managed cleanly using a secure state machine that routes users across different panels in a fluid, performance-optimized layout.
+
+### 🌐 Client-Side Views & Tab Paths
+
+Our client application handles routing states cleanly via the persistent global sidebar:
+
+| Route Key | Path / View Panel | Primary Purpose | Components Rendered |
+| :--- | :--- | :--- | :--- |
+| `dashboard` | `/` (Citizen Home HUD) | Primary dashboard summarizing municipal conditions, local stats, citizen levels, karma badges, and recent neighborhood logs. | `DashboardPanel` |
+| `issues` | `/issues` (Interactive Map) | Renders full-screen interactive Leaflet map canvas with custom filters, reactive pins, and comprehensive detail sliders. | `MapVisualizer` |
+| `verification` | `/verification` (Audit Queue) | Community peer-led audit ledger display showing unverified incidents pending community consensus. | `VerificationQueue`, `QueueCard` |
+| `report` | `/report` (Filing Wizard) | Drag-and-drop intake wizard handling Gemini analysis, coordinates triangulation, and intelligent duplicate alerts. | `ReportWizard`, `ImageUpload`, `DuplicateDetectionCard` |
+| `leaderboard` | `/leaderboard` (High Scores) | Interactive community standings detailing neighborhood citizen rankings and accumulated karma metrics. | `Leaderboard` |
+
+### 📡 Server-Side API Endpoint Mapping
+
+The Express application exposes dedicated backend proxy pathways to secure APIs and assets:
+
+*   **`POST /api/gemini/analyze`**
+    *   **Payload Type:** `multipart/form-data`
+    *   **Incoming Data:** `image` (Binary Stream Buffer), `description` (Plain text input).
+    *   **Action:** Validates input integrity, runs failover routing models (Gemini 3.5 -> Gemini 2.5), enforces structured prompt JSON outputs, and returns categorized incident metadata.
+*   **`GET *` (SPA Fallback)**
+    *   **Action:** Captures any external deep-links or page reloads in production, routing them gracefully to compiled `/dist/index.html` static assets to maintain client-side state stability.
+
+---
+
 ## 🌟 Core Feature Suite (In-Depth)
 
 ### 1. 🤖 Server-Side Gemini AI Diagnostics
 *   **Intelligent Classification:** Automatically extracts, parses, and categories raw user reports into official municipal departments (e.g., *Infrastructure*, *Utilities*, *Waste Management*, *Public Safety*, *Transportation*, *Environment*, *Streetlights*, etc.).
 *   **Automated Severity Grading:** Scores structural urgency across *LOW*, *MEDIUM*, *HIGH*, and *CRITICAL* thresholds using combined text descriptions and image context.
-*   **Dual-Model Failover Resilience:** Alternates between **Gemini 3.5 Flash** and **Gemini 2.5 Flash** to maintain high availability and route around model-capacity spikes or localized API rate limits.
 *   **Exponential Backoff Retries:** Intercepts transient 429 and 503 errors, executing delayed retry blocks to guarantee API transaction completion.
 *   **Valid Issue Auditing:** Detects spam, duplicates, or non-civic photos to maintain high system data integrity.
 
@@ -41,11 +131,6 @@ Citizens report real-world incidents, verify peer-submitted issues, promote cons
 *   **Decentralized Verification Protocol:** Issues enter a public verification ledger as "Pending". Citizens vote *Verify* or *Reject* based on community accuracy.
 *   **Consensus Score Accumulator:** Tallies community validation flags, adjusting local Trust Scores dynamically. Once a score climbs past the +70 Consensus threshold, the ticket is officially promoted to "Verified" status.
 *   **Proof-of-Stewardship Logs:** Visualizes voting tracks with clear progress bars and validation milestones.
-
-### 5. 🏆 Gamified Civic Progression (Leaderboards)
-*   **Karma Score Ledger:** Earn Karma Points (+15 for filing issues, +10 for validating queue tickets, +20 for supporting verified duplicates).
-*   **Rank Progression Levels:** Progress across citizen tiers (e.g., Level 1: Civic Novice up to Level 10: Neighborhood Hero).
-*   **Community Leaderboard:** A real-time, interactive board tracking top neighborhood contributors to spark friendly local advocacy.
 
 ---
 
@@ -171,40 +256,6 @@ NODE_ENV=development
     npm run start
     ```
     Launches the compiled server. Access on `http://localhost:3000`.
-
----
-
-## 📡 API Documentation
-
-### **POST** `/api/gemini/analyze`
-Submits raw citizen reports and an optional media attachment for advanced neural categorization and structural analysis.
-
-#### **Request Headers**
-`Content-Type: multipart/form-data`
-
-#### **Request Parameters (FormData)**
-*   `description` (text string, optional/required if image absent): Detailed citizen description.
-*   `image` (binary file stream, optional/required if description absent): Photo file of physical incident.
-
-#### **Successful Response Format (`200 OK`)**
-```json
-{
-  "category": "INFRASTRUCTURE",
-  "severity": "HIGH",
-  "summary": "Large active sinkhole forming on the northwest lane of 16th and Mission.",
-  "confidence": 94,
-  "isValidIssue": true,
-  "reason": "Visible subsurface cavitation on active public roadways presents an immediate threat to transit structures and vehicles.",
-  "suggestedAction": "Deploy immediate emergency transit barricades and alert the municipal public works division for rapid cement stabilization."
-}
-```
-
-#### **Error Response Format (`400 Bad Request` / `500 Server Error`)**
-```json
-{
-  "error": "Either a description or an image is required for analysis."
-}
-```
 
 ---
 
