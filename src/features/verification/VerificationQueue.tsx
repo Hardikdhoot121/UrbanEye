@@ -51,7 +51,7 @@ export function VerificationQueue() {
   );
 
   const verifiedIssues = issues.filter(
-    (issue) => issue.status === IssueStatus.VERIFIED
+    (issue) => issue.status === IssueStatus.COMMUNITY_VERIFIED
   );
 
   const triggerToast = (message: string, type: 'success' | 'warning' | 'info') => {

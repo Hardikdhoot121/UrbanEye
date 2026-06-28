@@ -1,4 +1,4 @@
-import { Issue, UserProfile, LeaderboardEntry } from '../types';
+import { Issue, IssueStatus, UserProfile, LeaderboardEntry } from '../types';
 
 /**
  * Service orchestrating API and database requests.
@@ -41,9 +41,9 @@ export class MockDatabaseService {
       votes: [],
       timeline: [
         {
-          status: issue.status || 'PENDING_VERIFICATION',
+          status: issue.status ?? IssueStatus.PENDING_VERIFICATION,
           timestamp: new Date().toISOString(),
-          actor: 'CITIZEN'
+          actor: 'CITIZEN' as const
         }
       ],
       createdAt: new Date().toISOString(),

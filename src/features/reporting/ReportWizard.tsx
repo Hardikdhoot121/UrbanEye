@@ -187,6 +187,13 @@ export function ReportWizard() {
       votes: [],
       consensusScore: 0,
       requiredConsensus: 15,
+      timeline: [
+        {
+          status: IssueStatus.PENDING_VERIFICATION,
+          timestamp: new Date().toISOString(),
+          actor: 'CITIZEN' as const
+        }
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
