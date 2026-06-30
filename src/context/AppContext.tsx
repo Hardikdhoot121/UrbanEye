@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Issue, UserProfile, IssueStatus, IssueCategory, Severity } from '../types';
+import { applyKarmaEvent } from '../services/karmaEngine';
 
 interface AppContextType {
   issues: Issue[];
@@ -207,6 +208,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('community_issues', JSON.stringify(updated));
       return updated;
     });
+    
+    // Apply karma reward for submitting an issue
+    applyKarmaEvent(newIssue.reporter.id, 'ISSUE_SUBMITTED');
   };
 
   const updateIssue = (updatedIssue: Issue) => {
@@ -258,8 +262,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         if (newConsensusScore >= requiredThreshold) {
           nextStatus = IssueStatus.COMMUNITY_VERIFIED;
+          if (issue.status !== IssueStatus.COMMUNITY_VERIFIED) {
+            applyKarmaEvent(issue.reporter.id, 'ISSUE_COMMUNITY_VERIFIED');
+          }
         } else if (newConsensusScore <= -30) {
           nextStatus = IssueStatus.REJECTED;
+          if (issue.status !== IssueStatus.REJECTED) {
+            applyKarmaEvent(issue.reporter.id, 'ISSUE_REJECTED_BY_COMMUNITY');
+          }
         }
 
         const nextTimeline = [...(issue.timeline || [])];
@@ -285,6 +295,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('community_issues', JSON.stringify(updated));
       return updated;
     });
+
+    // Apply karma for voting
+    applyKarmaEvent(voter.id, 'VOTE_ON_OTHER_ISSUE');
   };
 
   const adminAction = (issueId: string, action: 'APPROVE' | 'REJECT', note?: string) => {
@@ -310,6 +323,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('community_issues', JSON.stringify(updated));
       return updated;
     });
+
+    const targetIssue = issues.find(i => i.id === issueId);
+    if (targetIssue) {
+      if (action === 'APPROVE') {
+        applyKarmaEvent(targetIssue.reporter.id, 'ISSUE_APPROVED_BY_ADMIN');
+      } else {
+        applyKarmaEvent(targetIssue.reporter.id, 'ISSUE_REJECTED_BY_COMMUNITY');
+      }
+    }
   };
 
   const mergeIssue = (sourceId: string, targetId: string) => {

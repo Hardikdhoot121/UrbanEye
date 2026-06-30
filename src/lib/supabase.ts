@@ -1,8 +1,23 @@
+import { createClient } from '@supabase/supabase-js';
+import type { Database } from '../types/supabase';
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase environment variables. ' +
+    'Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your .env file.'
+  );
+}
+
 /**
- * Supabase client configuration placeholder.
- * Will be initialized with real environment variables upon connecting to Supabase.
+ * Supabase client singleton — used across all frontend services and hooks.
+ * Uses the anon key. Row Level Security handles access control.
  */
-export const supabasePlaceholder = {
-  client: null,
-  isConfigured: false,
-};
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});

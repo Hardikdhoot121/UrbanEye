@@ -8,6 +8,8 @@ import { DuplicateDetectionCard } from './components/DuplicateDetectionCard';
 import { findPotentialDuplicate } from './utils/similarity';
 import { Sparkles, AlertCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
+import { getLevelConfig } from '../../utils/levelUtils';
 import { Issue, IssueStatus, IssueCategory, Severity } from '../../types';
 
 interface AIAnalysis {
@@ -43,7 +45,8 @@ function parseSeverity(sev: string): Severity {
 }
 
 export function ReportWizard() {
-  const { addIssue, updateIssue, userProfile, issues } = useApp();
+  const { addIssue, updateIssue, issues } = useApp();
+  const { profile } = useAuth();
 
   // 1. Core State Ownership (File object for API payload + Preview URL for viewport)
   const [image, setImage] = useState<File | null>(null);
@@ -178,11 +181,11 @@ export function ReportWizard() {
         suggestedAction: analysis.suggestedAction,
       },
       reporter: {
-        id: userProfile?.id || "user-hardik",
-        username: userProfile?.username || "Hardik Dhoot",
-        karmaPoints: userProfile?.karmaPoints || 350,
-        level: userProfile?.level || 8,
-        avatarUrl: userProfile?.avatarUrl,
+        id: profile?.id || "user-anon",
+        username: profile?.username || "Citizen",
+        karmaPoints: profile?.karma_points || 0,
+        level: getLevelConfig(profile?.karma_points || 0).level,
+        avatarUrl: profile?.avatar_url,
       },
       votes: [],
       consensusScore: 0,

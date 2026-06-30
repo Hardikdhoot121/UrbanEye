@@ -18,7 +18,10 @@ import {
   BookmarkCheck
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
-import { Issue, IssueStatus } from '../../types';
+import { IssueStatus } from '../../types/issue';
+import { useAuth } from '../../context/AuthContext';
+import { getLevelConfig } from '../../utils/levelUtils';
+import { Issue } from '../../types';
 import { QueueCard } from './components/QueueCard';
 import { Button } from '../../components/ui/Button';
 
@@ -33,6 +36,7 @@ const TESTER_PERSONAS = [
 
 export function VerificationQueue() {
   const { issues, castVote } = useApp();
+  const { session, profile } = useAuth();
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'info' } | null>(null);
   
   // Choose tester profile to simulate votes from different community ranks
@@ -65,17 +69,28 @@ export function VerificationQueue() {
     const target = issues.find((i) => i.id === id);
     if (!target) return;
 
+    if (!session?.user || !profile) {
+      triggerToast("Please sign in to vote", "warning");
+      return;
+    }
+
+    const voteWeight = getLevelConfig(profile.karma_points).voteWeight;
+
     // Check if voter already casted a vote
-    const alreadyVoted = target.votes?.some(v => v.userId === currentTester.id);
+    const alreadyVoted = target.votes?.some(v => v.userId === session.user.id);
     if (alreadyVoted) {
       triggerToast(`You have already contributed your consensus vote on this issue! Double-voting is restricted.`, 'info');
       return;
     }
 
     // Call the centralized vote engine
-    castVote(id, true, currentTester);
+    castVote(id, true, {
+      id: session.user.id,
+      username: profile.username,
+      karmaPoints: profile.karma_points,
+      voteWeight: voteWeight,
+    });
 
-    const voteWeight = currentTester.voteWeight;
     const previousScore = target.consensusScore || 0;
     const newScore = previousScore + voteWeight;
     const targetThreshold = target.requiredConsensus || 15;
@@ -86,10 +101,10 @@ export function VerificationQueue() {
         ...target,
         consensusScore: newScore,
         votes: [...(target.votes || []), {
-          userId: currentTester.id,
-          username: currentTester.username,
-          karmaPoints: currentTester.karmaPoints,
-          voteWeight: currentTester.voteWeight,
+          userId: session.user.id,
+          username: profile.username,
+          karmaPoints: profile.karma_points,
+          voteWeight: voteWeight,
           isApproved: true,
           timestamp: new Date().toISOString()
         }]
@@ -106,17 +121,28 @@ export function VerificationQueue() {
     const target = issues.find((i) => i.id === id);
     if (!target) return;
 
+    if (!session?.user || !profile) {
+      triggerToast("Please sign in to vote", "warning");
+      return;
+    }
+
+    const voteWeight = getLevelConfig(profile.karma_points).voteWeight;
+
     // Check if voter already casted a vote
-    const alreadyVoted = target.votes?.some(v => v.userId === currentTester.id);
+    const alreadyVoted = target.votes?.some(v => v.userId === session.user.id);
     if (alreadyVoted) {
       triggerToast(`You have already contributed your consensus vote on this issue! Double-voting is restricted.`, 'info');
       return;
     }
 
     // Call the centralized vote engine
-    castVote(id, false, currentTester);
+    castVote(id, false, {
+      id: session.user.id,
+      username: profile.username,
+      karmaPoints: profile.karma_points,
+      voteWeight: voteWeight,
+    });
 
-    const voteWeight = currentTester.voteWeight;
     const previousScore = target.consensusScore || 0;
     const newScore = previousScore - voteWeight;
 
