@@ -63,9 +63,9 @@ export function ProfileDashboard() {
   }
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-950 p-8 space-y-8">
+    <div className="h-full overflow-y-auto bg-slate-950 p-4 sm:p-6 lg:p-8 space-y-6 sm:space-y-8">
       {/* 1. Premium Profile Header */}
-      <div className="relative bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-3xl p-8 overflow-hidden shadow-2xl shadow-emerald-900/10">
+      <div className="relative bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-3xl p-4 sm:p-6 lg:p-8 overflow-hidden shadow-2xl shadow-emerald-900/10">
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400" />
         <div className="flex flex-col md:flex-row items-start md:items-center gap-6 relative z-10">
           {profile?.avatar_url ? (
@@ -90,7 +90,7 @@ export function ProfileDashboard() {
                     type="text" 
                     value={newName} 
                     onChange={(e) => setNewName(e.target.value)}
-                    className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-bold text-xl w-48 focus:outline-none focus:border-emerald-500"
+                    className="bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-bold text-xl w-full sm:w-48 focus:outline-none focus:border-emerald-500"
                     autoFocus
                   />
                   <button 
@@ -170,7 +170,7 @@ export function ProfileDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
         
         {/* Main Column */}
         <div className="lg:col-span-2 space-y-8">
@@ -265,7 +265,7 @@ export function ProfileDashboard() {
               <Trophy className="w-5 h-5 text-amber-400" />
               Achievements
             </h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {badges.map(badge => (
                 <div 
                   key={badge.id}

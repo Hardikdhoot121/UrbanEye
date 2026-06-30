@@ -45,9 +45,9 @@ function MainLayout() {
 
   return (
     <AppProvider>
-      <div className="flex bg-slate-950 min-h-screen text-slate-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
+      <div className="flex bg-slate-950 h-screen overflow-hidden text-slate-100 font-sans selection:bg-emerald-500/30 selection:text-emerald-300">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden pt-14 md:pt-0">
           {renderActivePanel()}
         </main>
       </div>

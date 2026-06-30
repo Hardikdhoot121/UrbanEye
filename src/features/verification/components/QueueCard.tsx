@@ -299,8 +299,8 @@ export function QueueCard({ issue, onVerify, onReportFake, onSkip, activeVoter }
           </div>
 
           {/* Action Footer: Voting buttons with feedback based on voter profile weight */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-1.5">
-            <div className="flex items-center space-x-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-1.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               {hasVoted ? (
                 <div className="px-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs font-mono flex items-center space-x-2 text-slate-400">
                   <CheckCircle className={`w-4 h-4 ${userVote?.isApproved ? 'text-emerald-400' : 'text-red-400'}`} />
@@ -313,7 +313,7 @@ export function QueueCard({ issue, onVerify, onReportFake, onSkip, activeVoter }
                   <Button 
                     variant="primary" 
                     onClick={() => onVerify(issue.id, activeVoter)}
-                    className="flex items-center space-x-2 bg-emerald-600/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-600 hover:text-white px-4 py-2 text-xs font-semibold"
+                    className="flex items-center justify-center space-x-2 bg-emerald-600/10 text-emerald-400 border border-emerald-500/25 hover:bg-emerald-600 hover:text-white px-4 py-2 text-xs font-semibold"
                     id={`btn-contribute-verify-${issue.id}`}
                   >
                     <CheckCircle className="w-4 h-4 shrink-0" />
@@ -323,7 +323,7 @@ export function QueueCard({ issue, onVerify, onReportFake, onSkip, activeVoter }
                   <Button 
                     variant="danger" 
                     onClick={() => onReportFake(issue.id, activeVoter)}
-                    className="flex items-center space-x-2 bg-red-600/10 text-red-400 border border-red-500/25 hover:bg-red-600 hover:text-white px-4 py-2 text-xs font-semibold"
+                    className="flex items-center justify-center space-x-2 bg-red-600/10 text-red-400 border border-red-500/25 hover:bg-red-600 hover:text-white px-4 py-2 text-xs font-semibold"
                     id={`btn-report-fake-${issue.id}`}
                   >
                     <ShieldAlert className="w-4 h-4 shrink-0" />

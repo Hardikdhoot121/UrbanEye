@@ -57,24 +57,24 @@ export const AdminActions: React.FC<AdminActionsProps> = ({ issueId }) => {
           </button>
         </div>
       ) : (
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={handleApprove}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium transition"
           >
             <Check className="w-4 h-4" /> Approve
           </button>
           
           <button
             onClick={handleReject}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition"
           >
             <X className="w-4 h-4" /> Reject
           </button>
           
           <button
             onClick={() => setShowMergePrompt(true)}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium transition"
           >
             <GitMerge className="w-4 h-4" /> Merge Duplicate
           </button>

@@ -401,7 +401,7 @@ export function MapVisualizer() {
   };
 
   return (
-    <div className="p-6 h-[calc(100vh-2rem)] flex flex-col space-y-4 text-slate-100" id="map-visualizer-parent">
+    <div className="p-3 sm:p-6 h-[calc(100vh-4rem)] md:h-[calc(100vh-2rem)] flex flex-col space-y-4 text-slate-100" id="map-visualizer-parent">
       
       {/* Toast Notification HUD */}
       <AnimatePresence>
@@ -410,7 +410,7 @@ export function MapVisualizer() {
             initial={{ opacity: 0, y: -20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className={`fixed top-6 right-6 z-50 p-4 rounded-xl shadow-2xl border text-xs max-w-sm flex items-center space-x-3 backdrop-blur-md ${
+            className={`fixed top-20 md:top-6 right-4 md:right-6 z-50 p-4 rounded-xl shadow-2xl border text-xs max-w-[calc(100vw-2rem)] md:max-w-sm flex items-center space-x-3 backdrop-blur-md ${
               toastMessage.type === 'success'
                 ? 'bg-emerald-950/95 text-emerald-200 border-emerald-500/30'
                 : toastMessage.type === 'error'

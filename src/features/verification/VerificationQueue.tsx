@@ -186,7 +186,7 @@ export function VerificationQueue() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6 text-slate-100" id="verification-queue-container">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto space-y-6 text-slate-100" id="verification-queue-container">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-900 pb-5 gap-4">
         <div className="space-y-1">

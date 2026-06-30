@@ -18,7 +18,7 @@ export function Leaderboard() {
   );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6 text-slate-100" id="leaderboard-container">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 text-slate-100" id="leaderboard-container">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-900 pb-5 gap-4">
         <div>
@@ -31,7 +31,7 @@ export function Leaderboard() {
       </div>
 
       {/* Hero cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {mockHeroes.map((hero) => (
           <div key={hero.rank} className="bg-slate-900 border border-slate-800 p-5 rounded-xl flex items-center space-x-4 shadow-lg">
             <span className="text-2xl font-extrabold text-amber-500 font-mono">#{hero.rank}</span>

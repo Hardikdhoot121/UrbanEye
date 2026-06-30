@@ -292,7 +292,7 @@ export function ReportWizard() {
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto space-y-6 text-slate-100" id="report-wizard-container">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto space-y-6 text-slate-100" id="report-wizard-container">
 
       {/* Visual Header */}
       <div className="flex items-center space-x-3 pb-2 border-b border-slate-900">
