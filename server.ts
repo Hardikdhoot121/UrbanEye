@@ -57,7 +57,7 @@ async function generateContentWithRetry(
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   // Use memory storage for uploaded files to parse multipart/form-data
   const upload = multer({ storage: multer.memoryStorage() });
