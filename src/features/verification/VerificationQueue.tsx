@@ -40,8 +40,21 @@ export function VerificationQueue() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'warning' | 'info' } | null>(null);
   
   // Choose tester profile to simulate votes from different community ranks
-  const [activeTesterIdx, setActiveTesterIdx] = useState(2); // Default to Community Hero (Hardik Dhoot)
-  const currentTester = TESTER_PERSONAS[activeTesterIdx];
+  const [activeTesterIdx, setActiveTesterIdx] = useState(2);
+  
+  const isAdmin = profile?.role === 'admin';
+  
+  const currentUserVoter = profile && session ? {
+    id: session.user.id,
+    username: profile.username,
+    karmaPoints: profile.karma_points,
+    level: profile.level,
+    roleLabel: profile.role === 'admin' ? 'Admin' : 'Citizen',
+    voteWeight: getLevelConfig(profile.karma_points).voteWeight
+  } : null;
+
+  // Admin gets the tester persona selector, Citizens get their own real profile
+  const currentTester = (isAdmin ? TESTER_PERSONAS[activeTesterIdx] : currentUserVoter) || TESTER_PERSONAS[0];
 
   // Active view tab in this queue panel
   const [queueView, setQueueView] = useState<'pending' | 'verified'>('pending');
@@ -69,15 +82,16 @@ export function VerificationQueue() {
     const target = issues.find((i) => i.id === id);
     if (!target) return;
 
-    if (!session?.user || !profile) {
+    if (!session?.user || !profile || !currentTester) {
       triggerToast("Please sign in to vote", "warning");
       return;
     }
 
-    const voteWeight = getLevelConfig(profile.karma_points).voteWeight;
+    const voterId = isAdmin ? currentTester.id : session.user.id;
+    const voteWeight = currentTester.voteWeight;
 
     // Check if voter already casted a vote
-    const alreadyVoted = target.votes?.some(v => v.userId === session.user.id);
+    const alreadyVoted = target.votes?.some(v => v.userId === voterId);
     if (alreadyVoted) {
       triggerToast(`You have already contributed your consensus vote on this issue! Double-voting is restricted.`, 'info');
       return;
@@ -85,9 +99,9 @@ export function VerificationQueue() {
 
     // Call the centralized vote engine
     castVote(id, true, {
-      id: session.user.id,
-      username: profile.username,
-      karmaPoints: profile.karma_points,
+      id: voterId,
+      username: currentTester.username,
+      karmaPoints: currentTester.karmaPoints,
       voteWeight: voteWeight,
     });
 
@@ -101,9 +115,9 @@ export function VerificationQueue() {
         ...target,
         consensusScore: newScore,
         votes: [...(target.votes || []), {
-          userId: session.user.id,
-          username: profile.username,
-          karmaPoints: profile.karma_points,
+          userId: voterId,
+          username: currentTester.username,
+          karmaPoints: currentTester.karmaPoints,
           voteWeight: voteWeight,
           isApproved: true,
           timestamp: new Date().toISOString()
@@ -121,15 +135,16 @@ export function VerificationQueue() {
     const target = issues.find((i) => i.id === id);
     if (!target) return;
 
-    if (!session?.user || !profile) {
+    if (!session?.user || !profile || !currentTester) {
       triggerToast("Please sign in to vote", "warning");
       return;
     }
 
-    const voteWeight = getLevelConfig(profile.karma_points).voteWeight;
+    const voterId = isAdmin ? currentTester.id : session.user.id;
+    const voteWeight = currentTester.voteWeight;
 
     // Check if voter already casted a vote
-    const alreadyVoted = target.votes?.some(v => v.userId === session.user.id);
+    const alreadyVoted = target.votes?.some(v => v.userId === voterId);
     if (alreadyVoted) {
       triggerToast(`You have already contributed your consensus vote on this issue! Double-voting is restricted.`, 'info');
       return;
@@ -137,9 +152,9 @@ export function VerificationQueue() {
 
     // Call the centralized vote engine
     castVote(id, false, {
-      id: session.user.id,
-      username: profile.username,
-      karmaPoints: profile.karma_points,
+      id: voterId,
+      username: currentTester.username,
+      karmaPoints: currentTester.karmaPoints,
       voteWeight: voteWeight,
     });
 
@@ -198,51 +213,53 @@ export function VerificationQueue() {
         </div>
       </div>
 
-      {/* Interactive Profile Tester Switcher HUD */}
-      <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="flex items-center space-x-2">
-            <Award className="w-4.5 h-4.5 text-emerald-400" />
-            <h2 className="text-sm font-bold text-slate-200">Interactive Voter Persona Selector</h2>
+      {/* Interactive Profile Tester Switcher HUD (Admin Only) */}
+      {isAdmin && (
+        <div className="bg-slate-950/80 border border-slate-800/80 rounded-2xl p-5 space-y-4 shadow-xl mb-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="flex items-center space-x-2">
+              <Award className="w-4.5 h-4.5 text-emerald-400" />
+              <h2 className="text-sm font-bold text-slate-200">Admin Persona Simulator</h2>
+            </div>
+            <span className="text-3xs font-mono text-slate-500 uppercase tracking-widest">
+              Simulating: <span className="text-emerald-400 font-bold">{currentTester.username}</span> ({currentTester.roleLabel})
+            </span>
           </div>
-          <span className="text-3xs font-mono text-slate-500 uppercase tracking-widest">
-            Simulating: <span className="text-emerald-400 font-bold">{currentTester.username}</span> ({currentTester.roleLabel})
-          </span>
-        </div>
 
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Select a citizen persona below to simulate casting verification or rejection votes with different karma influence weights:
-        </p>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Select a citizen persona below to simulate casting verification or rejection votes with different karma influence weights:
+          </p>
 
-        {/* Selector Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-1">
-          {TESTER_PERSONAS.map((p, idx) => {
-            const isActive = activeTesterIdx === idx;
-            return (
-              <button
-                key={p.id}
-                onClick={() => setActiveTesterIdx(idx)}
-                className={`flex flex-col p-3 rounded-xl border text-left transition-all ${
-                  isActive 
-                    ? 'bg-emerald-500/10 border-emerald-500 text-slate-200 ring-1 ring-emerald-500/30' 
-                    : 'bg-slate-900 border-slate-800/60 hover:bg-slate-850 text-slate-400'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className={`text-3xs font-bold uppercase tracking-wider ${isActive ? 'text-emerald-400' : 'text-slate-500'}`}>
-                    {p.roleLabel}
-                  </span>
-                  <span className={`text-3xs font-mono font-bold px-1.5 py-0.5 rounded ${isActive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-950 text-slate-500'}`}>
-                    WT: +{p.voteWeight}
-                  </span>
-                </div>
-                <p className="text-xs font-semibold text-slate-200 mt-2 truncate">{p.username}</p>
-                <p className="text-3xs text-slate-500 font-mono mt-0.5">Karma: {p.karmaPoints} pts</p>
-              </button>
-            );
-          })}
+          {/* Selector Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-1">
+            {TESTER_PERSONAS.map((p, idx) => {
+              const isActive = activeTesterIdx === idx;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => setActiveTesterIdx(idx)}
+                  className={`flex flex-col p-3 rounded-xl border text-left transition-all ${
+                    isActive 
+                      ? 'bg-emerald-500/10 border-emerald-500 text-slate-200 ring-1 ring-emerald-500/30' 
+                      : 'bg-slate-900 border-slate-800/60 hover:bg-slate-850 text-slate-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className={`text-3xs font-bold uppercase tracking-wider ${isActive ? 'text-emerald-400' : 'text-slate-500'}`}>
+                      {p.roleLabel}
+                    </span>
+                    <span className={`text-3xs font-mono font-bold px-1.5 py-0.5 rounded ${isActive ? 'bg-emerald-500/20 text-emerald-300' : 'bg-slate-950 text-slate-500'}`}>
+                      WT: +{p.voteWeight}
+                    </span>
+                  </div>
+                  <p className="text-xs font-semibold text-slate-200 mt-2 truncate">{p.username}</p>
+                  <p className="text-3xs text-slate-500 font-mono mt-0.5">Karma: {p.karmaPoints} pts</p>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Verification List Tabs */}
       <div className="flex border-b border-slate-800">

@@ -42,6 +42,21 @@ This application evolved from a simple concept into a highly robust, multi-layer
 ┌──────────────────────────────────────┐
 │  Phase 5: Intelligent Duplicate HUD  │ ──► Haversine (≤50m), Jaccard text similarity, endorsement logs
 └──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│  Phase 6: Auth & Backend Foundation  │ ──► Supabase integration, OAuth, RLS Policies, SQL Schema
+└──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│  Phase 7: Centralized Gamification   │ ──► Karma Engine, dynamic 7-Tier Levels, Profile Timelines
+└──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│  Phase 8: Admin & Seed Bootstrap     │ ──► Admin roles via Postgres triggers, seed.sql data injection
+└──────────────────────────────────────┘
 ```
 
 ### 1️⃣ Phase 1: Core Architecture & Bootstrapping
@@ -73,6 +88,22 @@ This application evolved from a simple concept into a highly robust, multi-layer
     *   The user gets presented with an immediate comparison dashboard.
     *   **Support & Endorse Option:** Increments voter consensus on the existing issue, promoting it to municipal visibility without cluttering the map.
     *   **Create Anyway Option:** Files a new ticket flagged permanently with a transparent `Potential Duplicate` marker.
+
+### 6️⃣ Phase 6: Supabase Auth & Backend Foundation
+*   **Supabase Client Setup:** Shifted from purely mock data to a robust Postgres backend using Supabase, replacing standard UI mocks with an `AuthContext`.
+*   **Authentication Portal:** Built a beautiful glassmorphic Auth Page supporting Email/Password and Google OAuth sign-in.
+*   **Initial Schema & RLS:** Developed `001_initial_schema.sql` establishing robust relational tables (`profiles`, `issues`, `votes`, `badges`) with strict Row Level Security (RLS) ensuring users can only edit their own records.
+
+### 7️⃣ Phase 7: Centralized Karma & Gamification Engine
+*   **The Karma Engine:** Developed `src/services/karmaEngine.ts` and `utils/levelUtils.ts` to centralize all progression logic.
+*   **7-Tier Level System:** Dynamically calculates a user's level based strictly on Karma points (Citizen ➔ Volunteer ➔ Community Hero ➔ Guardian ➔ Civic Champion ➔ City Ambassador ➔ Legend of the City).
+*   **Vote Weighting:** A user's vote carries more weight in the validation queue based on their civic level (e.g., a Level 4 Guardian's vote counts as +5).
+*   **Profile Dashboard Timeline:** Aggregates real user activity (Issues Reported + Votes Cast) into a beautifully animated, chronological feed on their Profile UI.
+
+### 8️⃣ Phase 8: Admin Bootstrap & Development Seed Data (Current Stage)
+*   **Automated Admin Triggers:** Modified Postgres triggers to instantly grant the `admin` role upon sign up to designated test emails (e.g. `admin@123.com`).
+*   **Admin Dashboard:** Implemented secure, protected Admin routes allowing moderation of the verification queue (Approve, Merge, Reject).
+*   **Seed Data Generation:** Engineered `supabase/seed.sql` to cleanly inject dummy personas (Alice Seed, Bob Seed), issues, and votes into the live Postgres database, completely bypassing unique constraint collisions so that the Leaderboard and Maps remain visually robust during dev testing.
 
 ---
 
@@ -139,6 +170,7 @@ The Express application exposes dedicated backend proxy pathways to secure APIs 
 | Technology | Layer | Purpose |
 | :--- | :--- | :--- |
 | **React 19 (TypeScript)** | Client | Component-driven UI framework with type safety |
+| **Supabase (PostgreSQL)** | Database & Auth | Secure Auth, RLS, triggers, and relational backend data |
 | **Express 4** | Server | Backend server layer proxying AI operations and assets |
 | **Vite 6** | Build & Dev Server | Fast modern build runner and assets compiler |
 | **Tailwind CSS 4** | Styling | Utility-first CSS compiling and design styling |
@@ -164,29 +196,42 @@ The Express application exposes dedicated backend proxy pathways to secure APIs 
 ├── vite.config.ts              # Vite configuration and Tailwind compilation integrations
 ├── server.ts                   # Express server, Gemini API gateway, & static asset router
 ├── dist/                       # Output folder for production builds (bundled client & server)
+├── supabase/                   # Supabase backend architecture (schema migrations, dev seed data)
 └── src/
     ├── App.tsx                 # Base entry component orchestration
     ├── main.tsx                # Client-side DOM mounting hub
     ├── index.css               # Global styling, Tailwind v4 directives, custom font imports
+    ├── config/
+    │   └── karma.ts            # Centralized gamification engine thresholds and constants
     ├── types/                  # Typed schema manifests
     │   ├── index.ts            # Entry types exports
     │   ├── issue.ts            # Issue categorizations, statuses, coordinates, and AI analysis interfaces
-    │   └── user.ts             # Profile parameters, Level badges, and Karma specifications
+    │   ├── user.ts             # Profile parameters, Level badges, and Karma specifications
+    │   └── supabase.ts         # Generated TypeScript types from Supabase database schema
     ├── context/
-    │   └── AppContext.tsx      # Core state provider (persists mock data, synchronizes localStorage)
+    │   ├── AppContext.tsx      # Core state provider (persists mock data, synchronizes localStorage)
+    │   └── AuthContext.tsx     # Supabase session provider and real-time user profile state
     ├── services/
-    │   └── mockService.ts      # Seeding mock civic issues, user metrics, and leaderboard profiles
+    │   ├── mockService.ts      # Seeding mock civic issues, user metrics, and leaderboard profiles
+    │   └── karmaEngine.ts      # Logic controller for processing issue and voting karma rewards
     ├── components/
     │   └── ui/                 # Basic modular UI elements (Buttons, Inputs, Cards)
     ├── hooks/                  # Custom react hook abstractions
     ├── utils/                  # Universal helper libraries
+    │   └── levelUtils.ts       # Mathematical progression logic mapping karma to levels/badges
     └── features/               # Domain-driven feature architecture
+        ├── admin/
+        │   └── AdminDashboard.tsx    # Secure command center for queue moderation and user verification
+        ├── auth/
+        │   └── AuthPage.tsx          # Portal for Email/Password and Google OAuth login
         ├── dashboard/
         │   └── DashboardPanel.tsx    # Citizen main HUD, profile indicators, statistics grid
         ├── gamification/
         │   └── Leaderboard.tsx       # Live community leaderboard rankings cards
         ├── map/
         │   └── MapVisualizer.tsx     # Leaflet interactive map, custom popups, drawer panels
+        ├── profile/
+        │   └── ProfileDashboard.tsx  # Centralized gamification overview, karma stats, and activity timeline
         ├── reporting/
         │   ├── ReportWizard.tsx      # Multi-step report wizard orchestrator
         │   ├── components/
@@ -236,6 +281,12 @@ NODE_ENV=development
     ```bash
     npm install
     ```
+
+3.  **Run Database Migrations (Supabase):**
+    Copy the contents of `supabase/migrations/001_initial_schema.sql` into your Supabase SQL Editor and run it to construct tables, triggers, and RLS policies.
+
+4.  **Inject Seed Data (Optional):**
+    Copy `supabase/seed.sql` into your Supabase SQL Editor and run it to populate dummy issues, votes, and users for a rich UI experience immediately.
 
 ### 🏃‍♂️ Running the Application
 

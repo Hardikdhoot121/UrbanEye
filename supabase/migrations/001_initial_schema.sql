@@ -147,15 +147,16 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user ON public.notifications (user_
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, username, avatar_url)
+  INSERT INTO public.profiles (id, username, avatar_url, role)
   VALUES (
     NEW.id,
     COALESCE(
       NEW.raw_user_meta_data->>'name',
       NEW.raw_user_meta_data->>'full_name',
-      split_part(NEW.email, '@', 1)
+      split_part(NEW.email, '@', 1) || '_' || substr(NEW.id::text, 1, 6)
     ),
-    NEW.raw_user_meta_data->>'avatar_url'
+    NEW.raw_user_meta_data->>'avatar_url',
+    CASE WHEN NEW.email = 'superadmin@123.com' THEN 'admin' ELSE 'citizen' END
   )
   ON CONFLICT (id) DO NOTHING;
   RETURN NEW;
