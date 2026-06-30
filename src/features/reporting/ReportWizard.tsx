@@ -70,7 +70,7 @@ export function ReportWizard() {
     longitude: number;
   } | null>(null);
 
-  // 3. Real Full-Stack API integration flow calling server.ts endpoint
+  // 3. Real Full-Stack API integration flow calling gemini API directly from frontend
   const handleAnalyze = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!description.trim() && !image) {
@@ -83,14 +83,10 @@ export function ReportWizard() {
     setAnalysis(null);
 
     try {
-      const formData = new FormData();
-      formData.append("description", description);
-      
       let finalPublicUrl = publicImageUrl;
       let finalImagePath = imagePath;
 
       if (image) {
-        formData.append("image", image);
         // Upload to Supabase if not already uploaded
         if (!finalPublicUrl) {
           try {
@@ -106,20 +102,10 @@ export function ReportWizard() {
         }
       }
 
-      const response = await fetch("/api/gemini/analyze", {
-        method: "POST",
-        body: formData,
-      });
+      // Call the frontend Gemini service
+      const { analyzeIssueWithGemini } = await import('../../services/geminiService');
+      const data = await analyzeIssueWithGemini(description, image);
 
-      const contentType = response.headers.get("content-type") || "";
-      if (!contentType.includes("application/json")) {
-        throw new Error(`The server returned an unexpected response format (${contentType || "unknown"}). This usually means the backend server is still initializing or there is a routing conflict. Please wait a few seconds and try again.`);
-      }
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || `Server responded with status ${response.status}`);
-      }
       setAnalysis({
         category: data.category,
         severity: data.severity,
@@ -131,7 +117,7 @@ export function ReportWizard() {
       });
     } catch (err: any) {
       console.error("Gemini pipeline dispatch failed:", err);
-      setError(err.message || "A connection anomaly occurred while dispatching the payload to the Gemini server.");
+      setError(err.message || "A connection anomaly occurred while dispatching the payload to the Gemini API.");
     } finally {
       setIsLoading(false);
     }

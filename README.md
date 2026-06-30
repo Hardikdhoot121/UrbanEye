@@ -9,8 +9,8 @@ Citizens report real-world incidents, verify peer-submitted issues, promote cons
 ---
 
 ## 🗺️ Live App URLs & Previews
-- **Development Environment URL:** [AI Studio Development Hub](https://ais-dev-bzbdyqx5xdaip5pvprdq2v-968670335473.asia-east1.run.app)
-- **Shared Production Preview:** [AI Studio Shared Preview](https://ais-pre-bzbdyqx5xdaip5pvprdq2v-968670335473.asia-east1.run.app)
+- **Production Deployment (Google Cloud / Firebase Hosting):** [https://urban-eye-app-1234-fae07.web.app](https://urban-eye-app-1234-fae07.web.app)
+- **Database & Auth (Supabase):** Managed securely via PostgREST APIs.
 
 ---
 
@@ -61,6 +61,11 @@ This application evolved from a simple concept into a highly robust, multi-layer
                    ▼
 ┌──────────────────────────────────────┐
 │  Phase 9: Supabase Storage & Images  │ ──► Storage bucket, RLS upload policies, public CDN image URLs
+└──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│ Phase 10: Serverless Edge Deployment │ ──► Migrated to 100% Frontend Vite SPA, deployed to Firebase Hosting
 └──────────────────────────────────────┘
 ```
 
@@ -121,6 +126,12 @@ This application evolved from a simple concept into a highly robust, multi-layer
 *   **Graceful Fallback Handling:** If an upload fails (e.g., file size limit, network error), the report wizard degrades cleanly — allowing the issue to be submitted without an image rather than blocking the entire flow, with a toast notification alerting the user.
 *   **File Validation:** Client-side guards enforce a maximum of `5MB` per upload and accept only `image/jpeg`, `image/png`, and `image/webp` MIME types before the file even reaches the Supabase endpoint.
 
+### 🔟 Phase 10: Serverless Edge & Firebase Hosting Deployment (Final Status)
+*   **Decoupling the Monolith:** Shifted the architecture from a combined Express/Vite server into a pure **100% Frontend SPA**. This eliminated the need for complex backend infrastructure and billing (like Cloud Run).
+*   **Client-Side AI Integration:** Migrated Gemini API logic directly into `geminiService.ts` using the `@google/genai` library. This resolves CORS issues, eliminates backend latency, and securely manages API Keys via Vite Environment variables (`VITE_GEMINI_API_KEY`) during the build process.
+*   **Google Cloud Deployment:** Configured and deployed the application on **Firebase Hosting**, satisfying the hackathon's "Deployed on Google Cloud" requirement natively without incurring any premium billing.
+*   **Vite Optimization:** Rebuilt `package.json` to solely utilize Vite compilation, completely removing `esbuild`, `tsx`, and `server.ts` components to provide lightning-fast static builds distributed via Firebase global edge CDNs.
+
 ---
 
 ## 🗺️ Application Routing, Views & Navigation Paths
@@ -139,16 +150,16 @@ Our client application handles routing states cleanly via the persistent global 
 | `report` | `/report` (Filing Wizard) | Drag-and-drop intake wizard handling Gemini analysis, coordinates triangulation, and intelligent duplicate alerts. | `ReportWizard`, `ImageUpload`, `DuplicateDetectionCard` |
 | `leaderboard` | `/leaderboard` (High Scores) | Interactive community standings detailing neighborhood citizen rankings and accumulated karma metrics. | `Leaderboard` |
 
-### 📡 Server-Side API Endpoint Mapping
+### 📡 Serverless API & Edge Integrations
 
-The Express application exposes dedicated backend proxy pathways to secure APIs and assets:
+Instead of a traditional backend, the application utilizes direct integration logic inside the frontend:
 
-*   **`POST /api/gemini/analyze`**
-    *   **Payload Type:** `multipart/form-data`
-    *   **Incoming Data:** `image` (Binary Stream Buffer), `description` (Plain text input).
-    *   **Action:** Validates input integrity, runs failover routing models (Gemini 3.5 -> Gemini 2.5), enforces structured prompt JSON outputs, and returns categorized incident metadata.
-*   **`GET *` (SPA Fallback)**
-    *   **Action:** Captures any external deep-links or page reloads in production, routing them gracefully to compiled `/dist/index.html` static assets to maintain client-side state stability.
+*   **`geminiService.ts` (Google GenAI Engine)**
+    *   **Payload Mechanism:** Direct SDK invocation using `VITE_GEMINI_API_KEY`.
+    *   **Data Processed:** Image processing (Base64), Contextual description modeling.
+    *   **Action:** Validates input integrity, runs failover routing models (Gemini 3.5 -> Gemini 2.5), enforces structured prompt JSON outputs, and returns categorized incident metadata instantly.
+*   **Firebase Hosting Rewrites (SPA Fallback)**
+    *   **Action:** Captures any external deep-links or page reloads in production, routing them gracefully to compiled `/dist/index.html` static assets, empowering `react-router-dom` to maintain view states without 404 errors.
 
 ---
 
@@ -193,13 +204,11 @@ The Express application exposes dedicated backend proxy pathways to secure APIs 
 | :--- | :--- | :--- |
 | **React 19 (TypeScript)** | Client | Component-driven UI framework with type safety |
 | **Supabase (PostgreSQL)** | Database & Auth | Secure Auth, RLS, triggers, and relational backend data |
-| **Express 4** | Server | Backend server layer proxying AI operations and assets |
+| **Firebase Hosting** | Deployment | Global CDN distribution and serverless edge delivery |
 | **Vite 6** | Build & Dev Server | Fast modern build runner and assets compiler |
 | **Tailwind CSS 4** | Styling | Utility-first CSS compiling and design styling |
 | **@google/genai SDK** | AI Engine | Modern Google GenAI TypeScript client library |
-| **Esbuild** | Packaging | Bundles backend `server.ts` into a unified production file |
 | **Leaflet & @types/leaflet** | Geographic | Renders interactive spatial maps, pins, and custom canvases |
-| **Multer** | Asset Pipeline | Handles multipart form uploads (images) in server endpoints |
 | **Motion (React)** | Animation | Fluid page transitions, drawer slides, and micro-interactions |
 | **Lucide React** | Design | Modern visual outline and filled icons |
 
@@ -216,8 +225,8 @@ The Express application exposes dedicated backend proxy pathways to secure APIs 
 ├── package.json                # Project dependencies, dev, build, and start runner definitions
 ├── tsconfig.json               # Typescript compilation parameters
 ├── vite.config.ts              # Vite configuration and Tailwind compilation integrations
-├── server.ts                   # Express server, Gemini API gateway, & static asset router
-├── dist/                       # Output folder for production builds (bundled client & server)
+├── firebase.json               # Firebase Hosting routing rules and SPA redirects
+├── dist/                       # Output folder for production builds
 ├── supabase/                   # Supabase backend architecture (schema migrations, dev seed data)
 └── src/
     ├── App.tsx                 # Base entry component orchestration
@@ -284,11 +293,12 @@ Create a `.env` file at the root level of your workspace. Never commit your `.en
 
 Add your credentials according to the template in `.env.example`:
 ```env
-# Google Gemini API key used server-side (do not prefix with VITE_)
-GEMINI_API_KEY=your_google_gemini_api_key_here
+# Google Gemini API key used for intelligence operations
+VITE_GEMINI_API_KEY=your_google_gemini_api_key_here
 
-# Runtime control (Automatically configured in container envs)
-NODE_ENV=development
+# Supabase Configurations
+VITE_SUPABASE_URL=your_supabase_project_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### 📥 Installation Steps
@@ -312,23 +322,23 @@ NODE_ENV=development
 
 ### 🏃‍♂️ Running the Application
 
-*   **Development Mode (Direct TypeScript Execution with hot-reloading asset pipelines):**
+*   **Development Mode:**
     ```bash
     npm run dev
     ```
-    This launches the Express backend on port `3000` via `tsx` and mounts Vite as active middleware inside development. Access the viewport directly at `http://localhost:3000`.
+    This launches the Vite development server with Hot Module Replacement (HMR). Access the application locally at `http://localhost:5173`.
 
 *   **Production Compilation:**
     ```bash
     npm run build
     ```
-    This compiles the client-side SPA bundle into `/dist` via Vite, and bundles the server-side `server.ts` into a standalone, optimized CommonJS file at `dist/server.cjs` via `esbuild`.
+    This compiles the client-side SPA bundle into `/dist` via Vite, preparing it for Firebase Hosting deployment.
 
-*   **Start Production Server:**
+*   **Deployment to Firebase Hosting (Google Cloud):**
     ```bash
-    npm run start
+    firebase deploy
     ```
-    Launches the compiled server. Access on `http://localhost:3000`.
+    Automatically syncs your `dist` directory with Google's global CDN edge servers, pushing your site live to the world instantly.
 
 ---
 
