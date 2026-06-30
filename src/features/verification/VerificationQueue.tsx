@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Inbox, 
@@ -27,11 +27,11 @@ import { Button } from '../../components/ui/Button';
 
 // Mock tester personas representing community hierarchy
 const TESTER_PERSONAS = [
-  { id: 'tester-1', username: 'Jane Doe', karmaPoints: 45, level: 2, roleLabel: 'Citizen', voteWeight: 1 },
-  { id: 'tester-2', username: 'Mark Garcia', karmaPoints: 150, level: 4, roleLabel: 'Volunteer', voteWeight: 2 },
-  { id: 'tester-3', username: 'Hardik Dhoot', karmaPoints: 350, level: 8, roleLabel: 'Community Hero', voteWeight: 3 },
-  { id: 'tester-4', username: 'Sarah Connor', karmaPoints: 950, level: 14, roleLabel: 'Guardian', voteWeight: 5 },
-  { id: 'tester-5', username: 'Marcus Aurelius', karmaPoints: 2400, level: 25, roleLabel: 'Civic Champion', voteWeight: 8 }
+  { id: 'e0000000-0000-0000-0000-000000000001', username: 'Jane Doe', karmaPoints: 45, level: 2, roleLabel: 'Citizen', voteWeight: 1 },
+  { id: 'e0000000-0000-0000-0000-000000000002', username: 'Mark Garcia', karmaPoints: 150, level: 4, roleLabel: 'Volunteer', voteWeight: 2 },
+  { id: 'e0000000-0000-0000-0000-000000000003', username: 'Hardik Dhoot', karmaPoints: 350, level: 8, roleLabel: 'Community Hero', voteWeight: 3 },
+  { id: 'e0000000-0000-0000-0000-000000000004', username: 'Sarah Connor', karmaPoints: 950, level: 14, roleLabel: 'Guardian', voteWeight: 5 },
+  { id: 'e0000000-0000-0000-0000-000000000005', username: 'Marcus Aurelius', karmaPoints: 2400, level: 25, roleLabel: 'Civic Champion', voteWeight: 8 }
 ];
 
 export function VerificationQueue() {
@@ -67,9 +67,11 @@ export function VerificationQueue() {
     (issue) => issue.status === IssueStatus.PENDING_VERIFICATION
   );
 
-  const verifiedIssues = issues.filter(
-    (issue) => issue.status === IssueStatus.COMMUNITY_VERIFIED
-  );
+  const verifiedIssues = useMemo(() => issues.filter(i => 
+    i.status === IssueStatus.COMMUNITY_VERIFIED || 
+    i.status === IssueStatus.APPROVED || 
+    i.status === IssueStatus.RESOLVED
+  ), [issues]);
 
   const triggerToast = (message: string, type: 'success' | 'warning' | 'info') => {
     setToast({ message, type });
@@ -441,14 +443,41 @@ export function VerificationQueue() {
                     </span>
                     <div className="min-w-0 space-y-1">
                       <div className="flex items-center space-x-2.5">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 rounded-md text-3xs font-mono font-bold uppercase tracking-wider">
-                          Verified
+                        <span className={`px-2 py-0.5 border rounded-md text-3xs font-mono font-bold uppercase tracking-wider ${
+                          issue.status === IssueStatus.COMMUNITY_VERIFIED 
+                            ? 'bg-amber-500/10 text-amber-400 border-amber-500/25' 
+                            : issue.status === IssueStatus.RESOLVED 
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/25'
+                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                        }`}>
+                          {issue.status === IssueStatus.COMMUNITY_VERIFIED 
+                            ? 'Under Admin Verification' 
+                            : issue.status === IssueStatus.RESOLVED 
+                              ? 'Resolved'
+                              : 'Verified'}
                         </span>
                         <span className="text-3xs font-mono text-slate-500">ID: {issue.id.slice(0, 8)}</span>
                       </div>
                       <h4 className="font-bold text-slate-200 truncate pr-4 text-sm">
                         {issue.aiAnalysis.summary}
                       </h4>
+                      <span className="text-xs font-bold text-slate-300">
+                        {issue.consensusScore} / {issue.requiredConsensus || 15} PTS
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button variant="outline" className="text-xs py-1.5 px-3">
+                          View Audit Trail
+                        </Button>
+                        {isAdmin && issue.status === IssueStatus.COMMUNITY_VERIFIED && (
+                          <Button 
+                            variant="primary" 
+                            className="text-xs py-1.5 px-3 bg-blue-600 hover:bg-blue-500 text-white"
+                            onClick={() => castVote(issue.id, true, { ...currentTester, voteWeight: 100 })} // Mock admin approve
+                          >
+                            Admin Resolve
+                          </Button>
+                        )}
+                      </div>
                       <p className="text-xs text-slate-400 line-clamp-1 italic">
                         &ldquo;{issue.description}&rdquo;
                       </p>

@@ -63,6 +63,7 @@ export interface Issue {
   status: IssueStatus;
   coordinates: Coordinates;
   imageUrl?: string;
+  imagePath?: string;
   trustScore: number;
   aiAnalysis: {
     category: string;

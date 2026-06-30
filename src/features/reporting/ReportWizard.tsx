@@ -11,6 +11,7 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { getLevelConfig } from '../../utils/levelUtils';
 import { Issue, IssueStatus, IssueCategory, Severity } from '../../types';
+import { storageService } from '../../services/storageService';
 
 interface AIAnalysis {
   category: string;
@@ -51,6 +52,8 @@ export function ReportWizard() {
   // 1. Core State Ownership (File object for API payload + Preview URL for viewport)
   const [image, setImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [publicImageUrl, setPublicImageUrl] = useState<string | null>(null);
+  const [imagePath, setImagePath] = useState<string | null>(null);
   const [description, setDescription] = useState('');
   
   // 2. Status & Pipeline States
@@ -82,8 +85,25 @@ export function ReportWizard() {
     try {
       const formData = new FormData();
       formData.append("description", description);
+      
+      let finalPublicUrl = publicImageUrl;
+      let finalImagePath = imagePath;
+
       if (image) {
         formData.append("image", image);
+        // Upload to Supabase if not already uploaded
+        if (!finalPublicUrl) {
+          try {
+            const uploadResult = await storageService.uploadIssueImage(profile?.id || 'anon', image);
+            finalPublicUrl = uploadResult.publicUrl;
+            finalImagePath = uploadResult.path;
+            setPublicImageUrl(finalPublicUrl);
+            setImagePath(finalImagePath);
+          } catch (uploadError: any) {
+            console.error("Storage upload failed:", uploadError);
+            throw new Error(uploadError.message || "Failed to upload image to Supabase Storage. Please try again.");
+          }
+        }
       }
 
       const response = await fetch("/api/gemini/analyze", {
@@ -120,6 +140,8 @@ export function ReportWizard() {
   const handleReset = () => {
     setImage(null);
     setImagePreview(null);
+    setPublicImageUrl(null);
+    setImagePath(null);
     setDescription('');
     setAnalysis(null);
     setError(null);
@@ -168,7 +190,8 @@ export function ReportWizard() {
       severity: parseSeverity(analysis.severity),
       status: IssueStatus.PENDING_VERIFICATION,
       coordinates: { latitude: lat, longitude: lng },
-      imageUrl: imagePreview || undefined,
+      imageUrl: publicImageUrl || imagePreview || undefined,
+      imagePath: imagePath || undefined,
       trustScore: analysis.confidence,
       isPotentialDuplicate: isPotentialDuplicate,
       aiAnalysis: {
@@ -264,6 +287,8 @@ export function ReportWizard() {
   const handleImageChange = (file: File | null, previewUrl: string | null) => {
     setImage(file);
     setImagePreview(previewUrl);
+    setPublicImageUrl(null);
+    setImagePath(null);
   };
 
   return (

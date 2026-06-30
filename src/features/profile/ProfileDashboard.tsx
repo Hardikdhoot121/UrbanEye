@@ -35,39 +35,7 @@ export function ProfileDashboard() {
     };
   }, [issues, session, profile]);
 
-  // Generate real activity timeline from issues and votes
-  const recentActivities = useMemo(() => {
-    const activities: Array<{ id: string; type: string; title: string; desc: string; date: Date; icon: any; color: string }> = [];
-    
-    issues.filter(i => i.reporter.id === session?.user?.id).forEach(issue => {
-      activities.push({
-        id: `report-${issue.id}`,
-        type: 'report',
-        title: 'Reported Issue',
-        desc: `Submitted a ${issue.category.toLowerCase().replace(/_/g, ' ')} report.`,
-        date: new Date(issue.createdAt || Date.now()),
-        icon: MapPin,
-        color: 'text-blue-400 bg-blue-500/20'
-      });
-    });
-
-    issues.forEach(issue => {
-      const userVote = issue.votes?.find(v => v.userId === session?.user?.id);
-      if (userVote) {
-        activities.push({
-          id: `vote-${issue.id}-${userVote.timestamp}`,
-          type: 'vote',
-          title: 'Voted on Issue',
-          desc: `${userVote.isApproved ? 'Verified' : 'Flagged'} a report.`,
-          date: new Date(userVote.timestamp),
-          icon: Shield,
-          color: 'text-emerald-400 bg-emerald-500/20'
-        });
-      }
-    });
-
-    return activities.sort((a, b) => b.date.getTime() - a.date.getTime()).slice(0, 5);
-  }, [issues, session]);
+  // Recent activities removed as requested
 
   const karmaStats = getKarmaProgress(profile?.karma_points || 0);
   const badges = getUnlockedBadges(profile?.karma_points || 0, stats.reportsCreated);
@@ -285,46 +253,7 @@ export function ProfileDashboard() {
             </div>
           </div>
 
-          {/* 5. Recent Activity Timeline */}
-          <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6">
-            <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-              <Clock className="w-5 h-5 text-blue-400" />
-              Recent Activity
-            </h3>
-            
-            <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-800 before:to-transparent">
-              {recentActivities.length > 0 ? (
-                recentActivities.map((activity) => {
-                  const Icon = activity.icon;
-                  // Calculate relative time like "2h ago"
-                  const diffMs = Date.now() - activity.date.getTime();
-                  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-                  const diffDays = Math.floor(diffHrs / 24);
-                  const timeStr = diffDays > 0 ? `${diffDays}d ago` : diffHrs > 0 ? `${diffHrs}h ago` : 'Just now';
-
-                  return (
-                    <div key={activity.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-4 border-slate-950 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10 ${activity.color}`}>
-                        <Icon className="w-4 h-4" />
-                      </div>
-                      <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-950 border border-slate-800/50 p-4 rounded-xl shadow">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="font-bold text-white text-sm">{activity.title}</h4>
-                          <span className="text-xs text-slate-500">{timeStr}</span>
-                        </div>
-                        <p className="text-sm text-slate-400">{activity.desc}</p>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div className="text-center p-8 bg-slate-950/50 rounded-xl border border-slate-800/50">
-                  <p className="text-slate-500 text-sm">No recent activity found. Start reporting issues to build your history!</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
+          {/* Recent Activity section removed */}
         </div>
 
         {/* Sidebar Column */}

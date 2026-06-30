@@ -1,236 +1,94 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Issue, UserProfile, IssueStatus, IssueCategory, Severity } from '../types';
 import { applyKarmaEvent } from '../services/karmaEngine';
+import { storageService } from '../services/storageService';
+import { issueService } from '../services/issueService';
+import { useAuth } from './AuthContext';
 
 interface AppContextType {
   issues: Issue[];
-  userProfile: UserProfile | null;
   loading: boolean;
   addIssue: (issue: Issue) => void;
   updateIssue: (issue: Issue) => void;
   castVote: (
     issueId: string,
+    isApproved: boolean,
     voter: { id: string; username: string; karmaPoints: number; voteWeight: number }
   ) => void;
-  adminAction: (issueId: string, action: 'APPROVE' | 'REJECT', note?: string) => void;
+  adminAction: (issueId: string, action: 'APPROVE' | 'REJECT' | 'RESOLVE', note?: string) => void;
   mergeIssue: (sourceId: string, targetId: string) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// High-fidelity initial seed issues in San Francisco
-const initialSeedIssues: Issue[] = [
-  {
-    id: "seed-1",
-    description: "Major water leak from a broken fire hydrant on Pine St. Water is pooling heavily and causing minor flooding on the sidewalk.",
-    category: IssueCategory.WATER_SUPPLY,
-    severity: Severity.HIGH,
-    status: IssueStatus.PENDING_VERIFICATION,
-    coordinates: { latitude: 37.7901, longitude: -122.4112 },
-    trustScore: 85,
-    aiAnalysis: {
-      category: "WATER_SUPPLY",
-      severity: "HIGH",
-      summary: "Broken water hydrant leaking significant volume on Pine St.",
-      confidence: 85,
-      isValidIssue: true,
-      reason: "Visual water volume and location match public infrastructure failure.",
-      suggestedAction: "Dispatch emergency water utility crew to isolate water valve."
-    },
-    reporter: {
-      id: "user-alice",
-      username: "Alice Smith",
-      karmaPoints: 1240,
-      level: 12
-    },
-    votes: [
-      {
-        userId: "user-bob",
-        username: "Bob Johnson",
-        karmaPoints: 950,
-        voteWeight: 5,
-        isApproved: true,
-        timestamp: new Date(Date.now() - 3600000 * 1.5).toISOString()
-      },
-      {
-        userId: "user-charlie",
-        username: "Charlie Brown",
-        karmaPoints: 810,
-        voteWeight: 5,
-        isApproved: true,
-        timestamp: new Date(Date.now() - 3600000 * 1.1).toISOString()
-      }
-    ],
-    consensusScore: 10,
-    requiredConsensus: 15,
-    timeline: [
-      {
-        status: IssueStatus.PENDING_VERIFICATION,
-        timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
-        actor: 'CITIZEN'
-      }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(), // 2 hours ago
-    updatedAt: new Date(Date.now() - 3600000 * 1.1).toISOString()
-  },
-  {
-    id: "seed-2",
-    description: "Large deep pothole in the middle of the rightmost lane on Guerrero St. Extremely dangerous for motorcyclists and cyclists.",
-    category: IssueCategory.TRANSPORTATION,
-    severity: Severity.CRITICAL,
-    status: IssueStatus.COMMUNITY_VERIFIED,
-    coordinates: { latitude: 37.7592, longitude: -122.4258 },
-    trustScore: 94,
-    aiAnalysis: {
-      category: "TRANSPORTATION",
-      severity: "CRITICAL",
-      summary: "Severe deep pothole in primary vehicle lane on Guerrero St.",
-      confidence: 94,
-      isValidIssue: true,
-      reason: "Visual structural damage creates an immediate high-risk road hazard.",
-      suggestedAction: "Prioritize quick-set asphalt repair crew dispatch."
-    },
-    reporter: {
-      id: "user-bob",
-      username: "Bob Johnson",
-      karmaPoints: 950,
-      level: 9
-    },
-    votes: [],
-    consensusScore: 70,
-    requiredConsensus: 15,
-    timeline: [
-      {
-        status: IssueStatus.PENDING_VERIFICATION,
-        timestamp: new Date(Date.now() - 3600000 * 24).toISOString(),
-        actor: 'CITIZEN'
-      },
-      {
-        status: IssueStatus.COMMUNITY_VERIFIED,
-        timestamp: new Date(Date.now() - 3600000 * 20).toISOString(),
-        actor: 'COMMUNITY'
-      }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(), // 24 hours ago
-    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString()
-  },
-  {
-    id: "seed-3",
-    description: "Streetlight completely blacked out near the bus stop. Makes the area feel unsafe at night.",
-    category: IssueCategory.STREETLIGHTS,
-    severity: Severity.MEDIUM,
-    status: IssueStatus.RESOLVED,
-    coordinates: { latitude: 37.7784, longitude: -122.4119 },
-    trustScore: 90,
-    aiAnalysis: {
-      category: "STREETLIGHTS",
-      severity: "MEDIUM",
-      summary: "Inoperative street illumination luminaire near public transit shelter.",
-      confidence: 90,
-      isValidIssue: true,
-      reason: "Physical darkness and reported location match public asset database.",
-      suggestedAction: "Schedule bulb replacement order with municipal lighting team."
-    },
-    reporter: {
-      id: "user-charlie",
-      username: "Charlie Brown",
-      karmaPoints: 810,
-      level: 8
-    },
-    votes: [],
-    consensusScore: 75,
-    requiredConsensus: 15,
-    timeline: [
-      {
-        status: IssueStatus.PENDING_VERIFICATION,
-        timestamp: new Date(Date.now() - 3600000 * 72).toISOString(),
-        actor: 'CITIZEN'
-      },
-      {
-        status: IssueStatus.COMMUNITY_VERIFIED,
-        timestamp: new Date(Date.now() - 3600000 * 70).toISOString(),
-        actor: 'COMMUNITY'
-      },
-      {
-        status: IssueStatus.APPROVED,
-        timestamp: new Date(Date.now() - 3600000 * 68).toISOString(),
-        actor: 'ADMIN'
-      },
-      {
-        status: IssueStatus.RESOLVED,
-        timestamp: new Date(Date.now() - 3600000 * 12).toISOString(),
-        actor: 'SYSTEM',
-        note: 'Municipal work crew confirmed repair.'
-      }
-    ],
-    createdAt: new Date(Date.now() - 3600000 * 72).toISOString(), // 3 days ago
-    updatedAt: new Date(Date.now() - 3600000 * 12).toISOString()
-  }
-];
-
-const mockCurrentUser: UserProfile = {
-  id: "user-hardik",
-  email: "hardikdhoot121@gmail.com",
-  username: "Hardik Dhoot",
-  karmaPoints: 350,
-  level: 8,
-  badges: [],
-  createdAt: new Date().toISOString()
-};
-
 export function AppProvider({ children }: { children: ReactNode }) {
   const [issues, setIssues] = useState<Issue[]>([]);
-  const [userProfile] = useState<UserProfile | null>(mockCurrentUser);
   const [loading, setLoading] = useState<boolean>(true);
+  const { session } = useAuth();
 
-  // Load issues from localStorage on mount
+  // Load issues from Supabase DB on mount
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('community_issues');
-      if (stored) {
-        setIssues(JSON.parse(stored));
-      } else {
-        setIssues(initialSeedIssues);
-        localStorage.setItem('community_issues', JSON.stringify(initialSeedIssues));
+    async function fetchIssues() {
+      try {
+        setLoading(true);
+        const data = await issueService.getIssues();
+        setIssues(data);
+      } catch (err) {
+        console.error("Failed to load issues from Supabase", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Failed to load issues from localStorage", err);
-      setIssues(initialSeedIssues);
-    } finally {
-      setLoading(false);
     }
+    fetchIssues();
   }, []);
 
-  // Save to localStorage whenever issues change
-  const addIssue = (newIssue: Issue) => {
-    setIssues((prev) => {
-      const updated = [newIssue, ...prev];
-      localStorage.setItem('community_issues', JSON.stringify(updated));
-      return updated;
-    });
-    
-    // Apply karma reward for submitting an issue
+  const addIssue = async (newIssue: Issue) => {
+    // optimistic
+    setIssues((prev) => [newIssue, ...prev]);
     applyKarmaEvent(newIssue.reporter.id, 'ISSUE_SUBMITTED');
+    
+    try {
+      const created = await issueService.createIssue(newIssue);
+      setIssues((prev) => prev.map(i => i.id === newIssue.id ? created : i));
+    } catch (err) {
+      console.error("Failed to save issue to DB:", err);
+    }
   };
 
-  const updateIssue = (updatedIssue: Issue) => {
-    setIssues((prev) => {
-      const updated = prev.map((issue) => (issue.id === updatedIssue.id ? updatedIssue : issue));
-      localStorage.setItem('community_issues', JSON.stringify(updated));
-      return updated;
-    });
+  const updateIssue = async (updatedIssue: Issue) => {
+    setIssues((prev) => prev.map((issue) => (issue.id === updatedIssue.id ? updatedIssue : issue)));
+    try {
+      await issueService.updateIssue(updatedIssue);
+    } catch (err) {
+      console.error("Failed to update issue in DB:", err);
+    }
   };
 
-  const castVote = (
+  const castVote = async (
     issueId: string,
     isApproved: boolean,
     voter: { id: string; username: string; karmaPoints: number; voteWeight: number }
   ) => {
+    // 1. Send vote to DB
+    try {
+      await issueService.castVote(issueId, voter.id, isApproved, voter.voteWeight);
+    } catch (err) {
+      console.error("Failed to cast vote in DB:", err);
+      return; // Stop if vote fails (e.g. duplicate)
+    }
+
+    applyKarmaEvent(voter.id, 'VOTE_ON_OTHER_ISSUE');
+
+    // 2. Optimistic Update
     setIssues((prev) => {
+      let fraudIssueId: string | null = null;
+      let targetIssueForDbUpdate: Issue | null = null;
+      let newlyRejected = false;
+      let newlyVerified = false;
+
       const updated = prev.map((issue) => {
         if (issue.id !== issueId) return issue;
 
-        // Prevent duplicate voting by same user
         const alreadyVoted = issue.votes?.some((v) => v.userId === voter.id);
         if (alreadyVoted) return issue;
 
@@ -245,30 +103,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
         const updatedVotes = [...(issue.votes || []), newVote];
 
-        // Recalculate consensusScore
         const totalPositiveWeight = updatedVotes.filter((v) => v.isApproved).reduce((sum, v) => sum + v.voteWeight, 0);
         const totalNegativeWeight = updatedVotes.filter((v) => !v.isApproved).reduce((sum, v) => sum + v.voteWeight, 0);
         const newConsensusScore = totalPositiveWeight - totalNegativeWeight;
-
-        // Recalculate trustScore
         const totalWeightCast = totalPositiveWeight + totalNegativeWeight;
-        const newTrustScore = totalWeightCast === 0
-          ? issue.aiAnalysis.confidence
-          : Math.round((totalPositiveWeight / totalWeightCast) * 100);
+        const newTrustScore = totalWeightCast === 0 ? issue.aiAnalysis.confidence : Math.round((totalPositiveWeight / totalWeightCast) * 100);
 
-        // Determine next status
         let nextStatus = issue.status;
         const requiredThreshold = issue.requiredConsensus || 15;
 
         if (newConsensusScore >= requiredThreshold) {
           nextStatus = IssueStatus.COMMUNITY_VERIFIED;
           if (issue.status !== IssueStatus.COMMUNITY_VERIFIED) {
+            newlyVerified = true;
             applyKarmaEvent(issue.reporter.id, 'ISSUE_COMMUNITY_VERIFIED');
           }
         } else if (newConsensusScore <= -30) {
           nextStatus = IssueStatus.REJECTED;
           if (issue.status !== IssueStatus.REJECTED) {
+            newlyRejected = true;
             applyKarmaEvent(issue.reporter.id, 'ISSUE_REJECTED_BY_COMMUNITY');
+            fraudIssueId = issue.id;
+            if (issue.imagePath) {
+              storageService.deleteIssueImage(issue.imagePath).catch(err => console.error("Failed to delete fraud image:", err));
+            }
           }
         }
 
@@ -281,7 +139,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
         }
 
-        return {
+        const updatedIssueObj = {
           ...issue,
           votes: updatedVotes,
           consensusScore: newConsensusScore,
@@ -290,58 +148,99 @@ export function AppProvider({ children }: { children: ReactNode }) {
           timeline: nextTimeline,
           updatedAt: new Date().toISOString()
         };
+        
+        targetIssueForDbUpdate = updatedIssueObj;
+        return updatedIssueObj;
       });
 
-      localStorage.setItem('community_issues', JSON.stringify(updated));
-      return updated;
-    });
+      // 3. Trigger DB updates for status change
+      if (fraudIssueId) {
+        issueService.deleteIssue(fraudIssueId).catch(console.error);
+      } else if (targetIssueForDbUpdate) {
+        issueService.updateIssue(targetIssueForDbUpdate).catch(console.error);
+        if (newlyVerified || newlyRejected) {
+           issueService.insertTimelineEvent(issueId, targetIssueForDbUpdate!.status, 'COMMUNITY').catch(console.error);
+        }
+      }
 
-    // Apply karma for voting
-    applyKarmaEvent(voter.id, 'VOTE_ON_OTHER_ISSUE');
+      return fraudIssueId ? updated.filter(i => i.id !== fraudIssueId) : updated;
+    });
   };
 
-  const adminAction = (issueId: string, action: 'APPROVE' | 'REJECT', note?: string) => {
+  const adminAction = async (issueId: string, action: 'APPROVE' | 'REJECT' | 'RESOLVE', note?: string) => {
+    const adminId = session?.user.id || 'admin';
+    let targetStatus = IssueStatus.APPROVED;
+    if (action === 'REJECT') targetStatus = IssueStatus.REJECTED;
+    if (action === 'RESOLVE') targetStatus = IssueStatus.RESOLVED;
+
+    try {
+      await issueService.logAdminAction(issueId, adminId, action === 'RESOLVE' ? 'APPROVE' : action, note);
+      await issueService.insertTimelineEvent(issueId, targetStatus, 'ADMIN', adminId, note);
+    } catch(e) { console.error(e); }
+
     setIssues((prev) => {
+      let fraudIssueId: string | null = null;
       const updated = prev.map((issue) => {
         if (issue.id !== issueId) return issue;
-        const nextStatus = action === 'APPROVE' ? IssueStatus.APPROVED : IssueStatus.REJECTED;
-        return {
+        
+        const updatedIssueObj = {
           ...issue,
-          status: nextStatus,
+          status: targetStatus,
           timeline: [
             ...(issue.timeline || []),
             {
-              status: nextStatus,
+              status: targetStatus,
               timestamp: new Date().toISOString(),
-              actor: 'ADMIN',
+              actor: 'ADMIN' as const,
               note
             }
           ],
           updatedAt: new Date().toISOString()
         };
+        issueService.updateIssue(updatedIssueObj).catch(console.error);
+        
+        if (action === 'REJECT') {
+          fraudIssueId = issueId;
+          if (issue.imagePath) {
+             storageService.deleteIssueImage(issue.imagePath).catch(console.error);
+          }
+        }
+        
+        return updatedIssueObj;
       });
-      localStorage.setItem('community_issues', JSON.stringify(updated));
+
+      if (fraudIssueId) {
+         issueService.deleteIssue(fraudIssueId).catch(console.error);
+         return updated.filter(i => i.id !== fraudIssueId);
+      }
       return updated;
     });
-
+    
+    // karma 
     const targetIssue = issues.find(i => i.id === issueId);
     if (targetIssue) {
-      if (action === 'APPROVE') {
-        applyKarmaEvent(targetIssue.reporter.id, 'ISSUE_APPROVED_BY_ADMIN');
-      } else {
-        applyKarmaEvent(targetIssue.reporter.id, 'ISSUE_REJECTED_BY_COMMUNITY');
-      }
+       if (action === 'APPROVE' || action === 'RESOLVE') {
+         applyKarmaEvent(targetIssue.reporter.id, 'ISSUE_APPROVED_BY_ADMIN');
+       } else {
+         applyKarmaEvent(targetIssue.reporter.id, 'ISSUE_REJECTED_BY_COMMUNITY');
+       }
     }
   };
 
-  const mergeIssue = (sourceId: string, targetId: string) => {
+  const mergeIssue = async (sourceId: string, targetId: string) => {
+    const adminId = session?.user.id || 'admin';
+    try {
+       await issueService.logAdminAction(sourceId, adminId, 'MERGE', `Merged into ${targetId}`, targetId);
+       await issueService.insertTimelineEvent(sourceId, IssueStatus.CLOSED, 'ADMIN', adminId, `Merged into issue ${targetId}`);
+    } catch(e) { console.error(e); }
+
     setIssues((prev) => {
       const targetIssue = prev.find(i => i.id === targetId);
       if (!targetIssue) return prev;
       
       const updated = prev.map((issue) => {
         if (issue.id === sourceId) {
-          return {
+          const closedIssue = {
             ...issue,
             status: IssueStatus.CLOSED,
             mergedIntoId: targetId,
@@ -350,31 +249,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
               {
                 status: IssueStatus.CLOSED,
                 timestamp: new Date().toISOString(),
-                actor: 'ADMIN',
+                actor: 'ADMIN' as const,
                 note: `Merged into issue ${targetId}`
               }
             ],
             updatedAt: new Date().toISOString()
           };
+          issueService.updateIssue(closedIssue).catch(console.error);
+          return closedIssue;
         }
         if (issue.id === targetId) {
           const sourceIssue = prev.find(i => i.id === sourceId);
-          return {
+          const boostedIssue = {
             ...issue,
             consensusScore: issue.consensusScore + (sourceIssue?.consensusScore || 0),
             supporterCount: (issue.supporterCount || 0) + (sourceIssue?.supporterCount || 0) + 1,
             updatedAt: new Date().toISOString()
           };
+          issueService.updateIssue(boostedIssue).catch(console.error);
+          return boostedIssue;
         }
         return issue;
       });
-      localStorage.setItem('community_issues', JSON.stringify(updated));
       return updated;
     });
   };
 
   return (
-    <AppContext.Provider value={{ issues, userProfile, loading, addIssue, updateIssue, castVote, adminAction, mergeIssue }}>
+    <AppContext.Provider value={{ issues, loading, addIssue, updateIssue, castVote, adminAction, mergeIssue }}>
       {children}
     </AppContext.Provider>
   );
@@ -387,4 +289,3 @@ export function useApp() {
   }
   return context;
 }
-

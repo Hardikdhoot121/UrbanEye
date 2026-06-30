@@ -28,8 +28,8 @@ import {
 import { Button } from '../../components/ui/Button';
 import { motion, AnimatePresence } from 'motion/react';
 
-// Default map center: San Francisco, CA
-const SF_CENTER: [number, number] = [37.7749, -122.4194];
+// Default map center: Jodhpur, India (User's location)
+const DEFAULT_CENTER: [number, number] = [26.2389, 73.0243];
 
 export function MapVisualizer() {
   const { issues, userProfile, castVote } = useApp();
@@ -229,7 +229,7 @@ export function MapVisualizer() {
     if (!mapRef.current) {
       // Initialize leaflet map
       const map = L.map(mapContainerRef.current, {
-        center: SF_CENTER,
+        center: DEFAULT_CENTER,
         zoom: 13,
         zoomControl: false // Disable default so we can place custom layout / Leaflet default at right
       });
@@ -265,6 +265,9 @@ export function MapVisualizer() {
 
     // Plot fresh markers
     filteredIssues.forEach((issue) => {
+      // Do not plot markers for resolved or closed issues
+      if (issue.status === IssueStatus.RESOLVED || issue.status === IssueStatus.CLOSED) return;
+
       const isCurrentlySelected = selectedIssue?.id === issue.id;
       const marker = L.marker([issue.coordinates.latitude, issue.coordinates.longitude], {
         icon: createCustomMarker(issue.category, issue.status, isCurrentlySelected)
@@ -345,7 +348,7 @@ export function MapVisualizer() {
           console.error("Error accessing location:", error);
           triggerToast('Location access denied. Centered back to San Francisco.', 'error');
           if (mapRef.current) {
-            mapRef.current.setView(SF_CENTER, 13);
+            mapRef.current.setView(DEFAULT_CENTER, 13);
           }
         }
       );
@@ -356,9 +359,9 @@ export function MapVisualizer() {
 
   const handleResetView = () => {
     if (mapRef.current) {
-      mapRef.current.setView(SF_CENTER, 13);
+      mapRef.current.setView(DEFAULT_CENTER, 13);
       setSelectedIssue(null);
-      triggerToast('Map viewport reset to default SF parameters.', 'success');
+      triggerToast('Map viewport reset to default location.', 'success');
     }
   };
 
@@ -485,7 +488,7 @@ export function MapVisualizer() {
                 <div ref={mapContainerRef} className="w-full h-full" id="leaflet-map-element" />
 
                 {/* Overlaid Map Utilities Controls */}
-                <div className="absolute top-4 left-4 z-40 flex flex-col space-y-2 pointer-events-auto">
+                <div className="absolute top-4 left-4 z-[1000] flex flex-col space-y-2 pointer-events-auto">
                   <button
                     onClick={handleLocateMe}
                     className="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-emerald-400 rounded-xl shadow-2xl transition-colors cursor-pointer flex items-center space-x-1.5 text-xs font-mono font-semibold"
@@ -505,7 +508,7 @@ export function MapVisualizer() {
                 </div>
 
                 {/* Responsive counter notification bubble */}
-                <div className="absolute bottom-4 left-4 z-40 pointer-events-none bg-slate-900/90 border border-slate-850 px-3 py-2 rounded-xl text-3xs font-mono text-slate-300 tracking-wider flex items-center space-x-2">
+                <div className="absolute bottom-4 left-4 z-[1000] pointer-events-none bg-slate-900/90 border border-slate-850 px-3 py-2 rounded-xl text-3xs font-mono text-slate-300 tracking-wider flex items-center space-x-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                   <span>Plotted {filteredIssues.length} of {issues.length} records</span>
                 </div>
