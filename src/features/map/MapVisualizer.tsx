@@ -79,8 +79,7 @@ export function MapVisualizer() {
       if (filterStatus !== 'ALL') {
         if (filterStatus === 'PENDING' && issue.status !== IssueStatus.PENDING_VERIFICATION) return false;
         if (filterStatus === 'VERIFIED' && issue.status !== IssueStatus.COMMUNITY_VERIFIED) return false;
-        if (filterStatus === 'RESOLVED' && issue.status !== IssueStatus.RESOLVED) return false;
-        if (filterStatus === 'APPROVED' && issue.status !== IssueStatus.APPROVED) return false;
+        if (filterStatus === 'RESOLVED' && (issue.status !== IssueStatus.APPROVED && issue.status !== IssueStatus.RESOLVED)) return false;
       }
       if (filterStatus !== 'CLOSED' && issue.status === IssueStatus.CLOSED) return false;
 
@@ -427,16 +426,9 @@ export function MapVisualizer() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence mode="wait">
-        {!updatedDetailsIssue ? (
-          /* ================= INTERACTIVE MAP VIEWPORT ================= */
-          <motion.div 
-            key="map-view"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="flex-1 flex flex-col space-y-4 min-h-0"
-          >
+      <div className="relative flex-1 w-full h-full min-h-0">
+        <div className={`absolute inset-0 flex flex-col space-y-4 min-h-0 transition-opacity duration-300 ${updatedDetailsIssue ? 'opacity-0 pointer-events-none z-0' : 'opacity-100 z-10'}`}>
+          {/* ================= INTERACTIVE MAP VIEWPORT ================= */}
             {/* Upper controls / Filters / Search Box HUD */}
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-4 rounded-2xl shadow-xl">
               <div className="space-y-1">
@@ -463,7 +455,7 @@ export function MapVisualizer() {
 
                 {/* Filter Chips Container */}
                 <div className="flex items-center space-x-1.5 overflow-x-auto p-1 bg-slate-950 rounded-xl border border-slate-800">
-                  {['ALL', 'PENDING', 'VERIFIED', 'APPROVED', 'RESOLVED'].map((status) => (
+                  {['ALL', 'PENDING', 'VERIFIED', 'RESOLVED'].map((status) => (
                     <button
                       key={status}
                       onClick={() => setFilterStatus(status)}
@@ -663,10 +655,6 @@ export function MapVisualizer() {
                     </div>
                     <div className="flex items-center space-x-1.5">
                       <span className="w-2 h-2 rounded-full bg-emerald-500 block shrink-0"></span>
-                      <span>Admin Approved</span>
-                    </div>
-                    <div className="flex items-center space-x-1.5">
-                      <span className="w-2 h-2 rounded-full bg-sky-500 block shrink-0"></span>
                       <span>Resolved Work</span>
                     </div>
                     <div className="flex items-center space-x-1.5">
@@ -677,16 +665,18 @@ export function MapVisualizer() {
                 </div>
               </div>
             </div>
-          </motion.div>
-        ) : (
-          /* ================= DEEP ISSUE DETAILS SUBPAGE ================= */
-          <motion.div
-            key="details-view"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="flex-1 flex flex-col space-y-6 overflow-y-auto"
-          >
+        </div>
+
+        <AnimatePresence>
+          {updatedDetailsIssue && (
+            /* ================= DEEP ISSUE DETAILS SUBPAGE ================= */
+            <motion.div
+              key="details-view"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="absolute inset-0 flex flex-col space-y-6 overflow-y-auto bg-slate-950 z-20 pb-12"
+            >
             {/* Top Navigation Header */}
             <div className="flex items-center justify-between border-b border-slate-900 pb-5">
               <div className="flex items-center space-x-4">
@@ -803,36 +793,7 @@ export function MapVisualizer() {
                   </div>
                 </div>
 
-                {/* Interactive Voter Panel inside Details page if they are pending */}
-                {updatedDetailsIssue.status === IssueStatus.PENDING_VERIFICATION && (
-                  <div className="bg-slate-900/95 border border-slate-850 p-6 rounded-2xl shadow-xl space-y-4">
-                    <div className="flex items-center space-x-2">
-                      <Sparkles className="w-4.5 h-4.5 text-emerald-400" />
-                      <h3 className="text-sm font-bold text-slate-200 uppercase tracking-wide">Cast Consensus Audit</h3>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      You are logged in as <span className="text-emerald-400 font-bold">{userProfile?.username || 'Hardik Dhoot'}</span>. Your profile allows you to cast a consensus vote with a weight of <span className="text-emerald-400 font-mono font-bold">+{Math.max(1, Math.floor((userProfile?.karmaPoints || 350) / 100))}</span> points.
-                    </p>
-                    
-                    {/* Action buttons */}
-                    <div className="flex flex-wrap gap-3.5 pt-1">
-                      <button
-                        onClick={() => handleCastVoteOnDetails(true)}
-                        className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-5 rounded-xl text-xs transition-all shadow-lg hover:shadow-emerald-950/20 cursor-pointer flex items-center justify-center space-x-2"
-                      >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Verify Report (+{Math.max(1, Math.floor((userProfile?.karmaPoints || 350) / 100))} Pts)</span>
-                      </button>
-                      <button
-                        onClick={() => handleCastVoteOnDetails(false)}
-                        className="flex-1 bg-red-650 hover:bg-red-550 text-white font-bold py-3 px-5 rounded-xl text-xs transition-all shadow-lg hover:shadow-red-950/20 cursor-pointer flex items-center justify-center space-x-2"
-                      >
-                        <AlertTriangle className="w-4 h-4" />
-                        <span>Flag as Spam/Fake (-{Math.max(1, Math.floor((userProfile?.karmaPoints || 350) / 100))} Pts)</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
+                {/* Voter Panel Removed */}
               </div>
 
               {/* Right Column: Consensus parameters & voter timeline */}
@@ -925,9 +886,10 @@ export function MapVisualizer() {
                 </div>
               </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

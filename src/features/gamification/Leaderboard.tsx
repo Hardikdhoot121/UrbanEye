@@ -12,7 +12,10 @@ export function Leaderboard() {
   ];
 
   // Load actual community verified issues
-  const verifiedIssues = issues.filter((i) => i.status === IssueStatus.VERIFIED);
+  const verifiedIssues = issues.filter((i) => 
+    i.status === IssueStatus.APPROVED || 
+    i.status === IssueStatus.RESOLVED
+  );
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6 text-slate-100" id="leaderboard-container">
@@ -50,10 +53,10 @@ export function Leaderboard() {
           <div>
             <h3 className="text-sm font-bold font-mono tracking-wider text-slate-200 uppercase flex items-center space-x-2">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span>Community Verified Issues</span>
+              <span>Community Verified and Approved by Admin</span>
             </h3>
             <p className="text-slate-400 text-xs mt-1">
-              Issues that have achieved consensus threshold approvals (+70 PTS) and are greenlit for city-department dispatch.
+              Issues that have achieved consensus threshold approvals (+15 PTS) and are greenlit for city-department dispatch.
             </p>
           </div>
           <span className="text-2xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 px-2.5 py-1 rounded-lg">

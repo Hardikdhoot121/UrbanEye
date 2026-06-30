@@ -465,9 +465,7 @@ export function VerificationQueue() {
                         {issue.consensusScore} / {issue.requiredConsensus || 15} PTS
                       </span>
                       <div className="flex items-center gap-2">
-                        <Button variant="outline" className="text-xs py-1.5 px-3">
-                          View Audit Trail
-                        </Button>
+
                         {isAdmin && issue.status === IssueStatus.COMMUNITY_VERIFIED && (
                           <Button 
                             variant="primary" 

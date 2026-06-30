@@ -57,6 +57,11 @@ This application evolved from a simple concept into a highly robust, multi-layer
 ┌──────────────────────────────────────┐
 │  Phase 8: Admin & Seed Bootstrap     │ ──► Admin roles via Postgres triggers, seed.sql data injection
 └──────────────────────────────────────┘
+                   │
+                   ▼
+┌──────────────────────────────────────┐
+│  Phase 9: Supabase Storage & Images  │ ──► Storage bucket, RLS upload policies, public CDN image URLs
+└──────────────────────────────────────┘
 ```
 
 ### 1️⃣ Phase 1: Core Architecture & Bootstrapping
@@ -100,10 +105,21 @@ This application evolved from a simple concept into a highly robust, multi-layer
 *   **Vote Weighting:** A user's vote carries more weight in the validation queue based on their civic level (e.g., a Level 4 Guardian's vote counts as +5).
 *   **Profile Dashboard Timeline:** Aggregates real user activity (Issues Reported + Votes Cast) into a beautifully animated, chronological feed on their Profile UI.
 
-### 8️⃣ Phase 8: Admin Bootstrap & Development Seed Data (Current Stage)
+### 8️⃣ Phase 8: Admin Bootstrap & Development Seed Data
 *   **Automated Admin Triggers:** Modified Postgres triggers to instantly grant the `admin` role upon sign up to designated test emails (e.g. `admin@123.com`).
 *   **Admin Dashboard:** Implemented secure, protected Admin routes allowing moderation of the verification queue (Approve, Merge, Reject).
 *   **Seed Data Generation:** Engineered `supabase/seed.sql` to cleanly inject dummy personas (Alice Seed, Bob Seed), issues, and votes into the live Postgres database, completely bypassing unique constraint collisions so that the Leaderboard and Maps remain visually robust during dev testing.
+
+### 9️⃣ Phase 9: Supabase Storage Bucket & Image Integration (Current Stage)
+*   **Storage Bucket Creation:** Provisioned a dedicated `issue-images` public bucket inside Supabase Storage to persist all user-uploaded civic report photos with persistent CDN-backed URLs.
+*   **Upload Flow Architecture:** Replaced all temporary base64 / local blob URL previews with a direct `supabase.storage.from('issue-images').upload(...)` pipeline, triggered immediately after image selection inside `ImageUpload.tsx`.
+*   **Migration — Storage RLS Policies:** Created `003_storage_policies.sql` and `002_add_image_path.sql` migrations to:
+    *   Allow any authenticated user to upload images under their own `user_id/` path prefix.
+    *   Grant public `SELECT` access so images can be rendered as `<img>` tags via the Supabase CDN URL without requiring auth tokens.
+    *   Prevent unauthorized overwrites — users can only manage files inside their own prefixed directory.
+*   **Public URL Resolution:** After a successful upload, the client calls `supabase.storage.from('issue-images').getPublicUrl(path)` to obtain a permanent, shareable CDN link stored directly in the `issues.image_url` column inside Postgres.
+*   **Graceful Fallback Handling:** If an upload fails (e.g., file size limit, network error), the report wizard degrades cleanly — allowing the issue to be submitted without an image rather than blocking the entire flow, with a toast notification alerting the user.
+*   **File Validation:** Client-side guards enforce a maximum of `5MB` per upload and accept only `image/jpeg`, `image/png`, and `image/webp` MIME types before the file even reaches the Supabase endpoint.
 
 ---
 
@@ -162,6 +178,12 @@ The Express application exposes dedicated backend proxy pathways to secure APIs 
 *   **Decentralized Verification Protocol:** Issues enter a public verification ledger as "Pending". Citizens vote *Verify* or *Reject* based on community accuracy.
 *   **Consensus Score Accumulator:** Tallies community validation flags, adjusting local Trust Scores dynamically. Once a score climbs past the +70 Consensus threshold, the ticket is officially promoted to "Verified" status.
 *   **Proof-of-Stewardship Logs:** Visualizes voting tracks with clear progress bars and validation milestones.
+
+### 5. 🌍 Environmental Impact Telemetry
+*   **Hyperlocal Dashboard:** Aggregates real-time neighborhood performance and environmental conservation metrics dynamically across the entire community database.
+*   **Water Saved Formula:** `(Total Resolved Issues * 4500) + (Total Verified/Approved Issues * 1200)` Gallons.
+*   **Carbon Reduction Formula:** `(Total Resolved Issues * 140) + (Total Verified/Approved Issues * 35)` kg CO₂.
+*   *Note: Metrics are calculated globally based on live municipal dispatches and early infrastructure leakage containment audits.*
 
 ---
 

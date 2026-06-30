@@ -1,12 +1,12 @@
 import { useApp } from '../../context/AppContext';
 import { IssueStatus } from '../../types';
-import { 
-  ShieldAlert, 
-  ShieldCheck, 
-  CheckCircle, 
-  XCircle, 
-  Activity, 
-  Layers 
+import {
+  ShieldAlert,
+  ShieldCheck,
+  CheckCircle,
+  XCircle,
+  Activity,
+  Layers
 } from 'lucide-react';
 
 export function DashboardPanel() {
@@ -14,7 +14,10 @@ export function DashboardPanel() {
 
   // Compute dynamic stats
   const pendingCount = issues.filter((i) => i.status === IssueStatus.PENDING_VERIFICATION).length;
-  const verifiedCount = issues.filter((i) => i.status === IssueStatus.VERIFIED).length;
+  const verifiedCount = issues.filter((i) =>
+    i.status === IssueStatus.COMMUNITY_VERIFIED ||
+    i.status === IssueStatus.APPROVED
+  ).length;
   const resolvedCount = issues.filter((i) => i.status === IssueStatus.RESOLVED).length;
   const rejectedCount = issues.filter((i) => i.status === IssueStatus.REJECTED).length;
 
